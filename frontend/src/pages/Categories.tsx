@@ -241,8 +241,7 @@ export default function Categories() {
     const SelectedIcon = resolveIcon(icon)
 
     return (
-        <Container maxWidth="md">
-
+        <Container maxWidth="xl">
             {/* Form Card */}
             <Card variant="outlined" sx={{ mb: 3, backgroundColor: 'rgb(50, 50, 50)' }}>
                 <CardContent>
@@ -359,7 +358,7 @@ export default function Categories() {
                 loading_fetch={loading_fetch}
                 onEdit={handleEditRequest}
                 onNotify={notify}
-                onRemove={removeCategoryLocal} // ← update local array after successful delete                
+                onRemove={removeCategoryLocal} // ← update local array after successful delete
             />
 
             {/* Snackbar */}

@@ -21,7 +21,9 @@ import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CategoryIcon from '@mui/icons-material/Category'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import PageHeader from './components/PageHeader.tsx'
+import PageFooter from './components/PageFooter.tsx'
 import Categories from './pages/Categories.tsx'
+import Cards from './pages/Cards.tsx'
 import theme from './theme'
 
 const drawerWidth = 280 // a bit wider to breathe with icons
@@ -119,11 +121,38 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
     )
 }
 
+function useScrollFade({ max = 240, minOpacity = 0.25 } = {}) {
+    const [opacity, setOpacity] = React.useState(1)
+
+    React.useEffect(() => {
+        let raf = 0
+        const onScroll = () => {
+            if (raf) return
+            raf = requestAnimationFrame(() => {
+                const y = window.scrollY || window.pageYOffset || 0
+                const next = Math.max(minOpacity, 1 - y / max)
+                setOpacity(next)
+                raf = 0
+            })
+        }
+
+        window.addEventListener('scroll', onScroll, { passive: true })
+        onScroll() // initialize at load
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            if (raf) cancelAnimationFrame(raf)
+        }
+    }, [max, minOpacity])
+
+    return opacity
+}
+
 export default function App() {
     const [drawerOpen, setDrawerOpen] = React.useState(false)
 
     const toggleDrawer = () => setDrawerOpen((prev) => !prev)
     const closeDrawer = () => setDrawerOpen(false)
+    const bgOpacity = useScrollFade({ max: 300, minOpacity: 0.1 })
 
     return (
         <ThemeProvider theme={theme}>
@@ -133,9 +162,28 @@ export default function App() {
                     {/* Top AppBar */}
                     <AppBar
                         position="fixed"
+                        color="transparent"
+                        elevation={0}
                         sx={{
-                            zIndex: (t) => t.zIndex.drawer + 1, // keep AppBar above non-modal content
-                            backgroundImage: 'linear-gradient(to right, #006661ff, #03a2bea6)'
+                            zIndex: (t) => t.zIndex.drawer + 1,
+                            // draw your gradient as a separate layer so only it fades
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: -1,
+                                pointerEvents: 'none',
+                                // same gradient as yours, but using rgba for clarity
+                                backgroundImage:
+                                    'linear-gradient(to right, rgba(0,102,97,1), rgba(3,162,190,0.65))',
+                                opacity: bgOpacity, // 👈 fades with scroll
+                                transition: 'opacity 160ms ease',
+                            },
+                            // optional “glass” look
+                            backdropFilter: 'saturate(130%) blur(8px)',
+                            WebkitBackdropFilter: 'saturate(130%) blur(8px)',
+                            // optional subtle border so it doesn't completely vanish visually
+                            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                         }}
                     >
                         <Toolbar>
@@ -177,12 +225,12 @@ export default function App() {
                             {/* You can add more sections here later (e.g., Settings, Help) */}
                         </Box>
                     </Drawer>
-                        
+
                     {/* Main content (no left margin; overlay drawer won't push this) */}
                     <Box
                         component="main"
                         sx={{
-                            flexGrow: 1,                            
+                            flexGrow: 1,
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'flex-start', // ⬆️ keep content at the top
@@ -191,20 +239,19 @@ export default function App() {
                     >
                         {/* spacer for AppBar height */}
                         <Toolbar />
-                        
-                        <Box sx={{ mb: 2 }}>
+
+                        <Box sx={{ width: '100%', mx: 'auto', marginTop: 4 }}>
                             <PageHeader />
+                            <Box sx={{ marginY: 6 }}>
+                                <Routes>
+                                    <Route path="/categories" element={<Categories />} />
+                                     <Route path="/cards" element={<Cards />} /> 
+                                    {/* <Route path="/rankings" element={<Rankings />} /> */}
+                                </Routes>
+                            </Box>
                         </Box>
 
-                        
-                        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
-                            <Routes>
-                                <Route path="/categories" element={<Categories />} />
-                                {/* <Route path="/cards" element={<Cards />} /> */}
-                                {/* <Route path="/rankings" element={<Rankings />} /> */}
-                            </Routes>
-                        </Box>
-
+                        <PageFooter />
                     </Box>
                 </Box>
             </Router>

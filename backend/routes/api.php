@@ -22,6 +22,8 @@ Route::get('/get_card/{card}', [CardController::class, 'getCard']); // Show one
 Route::post('/add_card', [CardController::class, 'addCard']); // Create
 Route::put('/edit_card/{card}', [CardController::class, 'editCard']); // Update
 Route::delete('/delete_card/{card}', [CardController::class, 'deleteCard']); // Delete
+Route::post('/sync_card_categories/{card}', [CardController::class, 'syncCardCategories']); // Sync Card Categories
+Route::post('/delete_card_category/{card}', [CardController::class, 'deleteCardCategories']); // Sync Card Categories
 
 // 🗂️ Category Routes
 Route::get('/get_categories', [CategoryController::class, 'getCategories']); // List all

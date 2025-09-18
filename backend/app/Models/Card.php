@@ -12,7 +12,7 @@ class Card extends Model
     protected $fillable = [
         'name',
         'description',
-        'image_path',
+        'image_url',
     ];
 
     public function categories()

@@ -17,7 +17,7 @@ class CategoryController extends Controller
     public function getCategories(Request $request)
     {        
         $categories = Category::orderBy('name')->get();
-        return response()->json([]);
+        return response()->json($categories);
     }
 
     public function addCategory(Request $request)

@@ -1,7 +1,5 @@
 import { createTheme } from '@mui/material/styles'
-import {
-    blue, green, red, yellow, orange, grey, purple, teal
-} from '@mui/material/colors'
+import { blue, green, red, yellow, orange, grey, purple, teal } from '@mui/material/colors'
 
 const theme = createTheme({
     palette: {
@@ -11,7 +9,7 @@ const theme = createTheme({
         success: { main: green[500] },
         error: { main: red[500] },
         info: { main: blue[300] },
-        warning: { main: orange[400] },
+        warning: { main: orange[500] },
         background: {
             default: 'rgb(20, 20, 25)',
             paper: grey[800],
@@ -53,6 +51,7 @@ const theme = createTheme({
             grey_4: grey[700],
             grey_5: grey[800],
             grey_6: grey[900],
+            grey_7: 'rgba(17, 17, 17, 1)',
 
             purple_1: purple[100],
             purple_2: purple[300],

@@ -39,6 +39,7 @@ declare module '@mui/material/styles' {
             grey_4: string
             grey_5: string
             grey_6: string
+            grey_7: string
 
             purple_1: string
             purple_2: string
