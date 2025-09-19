@@ -29,8 +29,9 @@ import ClearIcon from '@mui/icons-material/Clear'
 import * as MuiIcons from '@mui/icons-material'
 import { useTheme } from '@mui/material/styles'
 import { TransitionGroup } from 'react-transition-group'
-import api from '../services/api'
-import type { Category } from '../pages/Categories'
+import api from '../../services/api'
+import type { Category } from './types'
+import type { AlertColor } from '@mui/material/Alert'
 
 /* ----------------------------- Icon utilities ----------------------------- */
 
@@ -61,8 +62,6 @@ function getReadableTextColor(hex: string): string {
 }
 
 /* ---------------------------------- Types --------------------------------- */
-
-type AlertColor = 'success' | 'error' | 'warning' | 'info'
 
 interface Props {
     categories: Category[]
@@ -269,7 +268,20 @@ export default function CategoryList({
 
                 {/* Use CardContent to control internal padding precisely */}
                 <CardContent sx={{ p: 0 }}>
-                    <List sx={{ py: 1, overflow: 'visible' }}>
+                    <List
+                        component="div"
+                        disablePadding
+                        sx={{
+                            py: 1,
+                            overflow: 'visible',
+                            // Make it a 2-column grid (responsive: 1 col on xs, 2 cols from sm up)
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
+                            gap: 2, // theme spacing between items
+                            // Ensure children can shrink for text ellipsis
+                            '& > *': { minWidth: 0 },
+                        }}
+                    >
                         {/* TransitionGroup animates additions/removals */}
                         <TransitionGroup component={null}>
                             {loading_fetch
@@ -288,13 +300,13 @@ export default function CategoryList({
                                               <ListItem
                                                   disableGutters
                                                   sx={{
-                                                      my: 1,
                                                       px: 2, // internal horizontal padding
                                                       py: 1, // internal vertical padding
                                                       borderRadius: 1.5,
                                                       bgcolor: theme.palette.customColors.grey_6,
                                                       border: `1px solid ${theme.palette.divider}`,
                                                       boxShadow: 2,
+                                                      cursor: 'pointer',
                                                       transition: (t) =>
                                                           t.transitions.create(
                                                               ['box-shadow', 'transform'],
@@ -309,6 +321,7 @@ export default function CategoryList({
                                                           transform: 'translateY(-1px)',
                                                       },
                                                   }}
+                                                  onClick={() => onEdit(cat)}
                                               >
                                                   <Box
                                                       sx={{
@@ -330,18 +343,21 @@ export default function CategoryList({
                                                       <Box sx={{ flex: 1, minWidth: 0 }}>
                                                           <ListItemText
                                                               primary={cat.name}
+                                                              title={cat.name}
                                                               secondary={
                                                                   cat.icon
                                                                       ? `Icon: ${toBaseIconName(cat.icon)}`
                                                                       : undefined
                                                               }
-                                                              primaryTypographyProps={{
-                                                                  fontWeight: 600,
-                                                                  noWrap: true,
-                                                              }}
-                                                              secondaryTypographyProps={{
-                                                                  noWrap: true,
-                                                                  color: 'text.secondary',
+                                                              slotProps={{
+                                                                  primary: {
+                                                                      fontWeight: 600,
+                                                                      noWrap: true,
+                                                                  },
+                                                                  secondary: {
+                                                                      noWrap: true,
+                                                                      color: 'text.secondary',
+                                                                  },
                                                               }}
                                                           />
                                                       </Box>
@@ -406,7 +422,7 @@ export default function CategoryList({
                 slotProps={{
                     paper: {
                         sx: {
-                            bgcolor: theme.palette.customColors.grey_6, 
+                            bgcolor: theme.palette.customColors.grey_6,
                             color: 'common.white',
                             backgroundImage: 'none',
                             border: '1px solid',

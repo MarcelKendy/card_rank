@@ -3,6 +3,12 @@ import '@mui/material/styles'
 declare module '@mui/material/styles' {
     interface Palette {
         customColors: {
+            white: string
+            white_off: string
+            white_grey: string
+            white_yellow: string
+            white_blue: string
+
             blue_1: string
             blue_2: string
             blue_3: string

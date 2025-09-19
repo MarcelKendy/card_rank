@@ -15,6 +15,12 @@ const theme = createTheme({
             paper: grey[800],
         },
         customColors: {
+            white: 'rgba(255, 255, 255, 1)',
+            white_off: 'rgba(235, 233, 216, 1)',
+            white_grey: 'rgba(187, 187, 187, 1)',
+            white_yellow: 'rgba(255, 244, 209, 1)',
+            white_blue: 'rgba(219, 241, 255, 1)',
+
             blue_1: blue[100],
             blue_2: blue[300],
             blue_3: blue[500],

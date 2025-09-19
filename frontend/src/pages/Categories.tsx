@@ -16,16 +16,9 @@ import EditIcon from '@mui/icons-material/Edit'
 import * as MuiIcons from '@mui/icons-material' // ⚠️ Imports all icons; consider curating or code-splitting in production.
 import { createFilterOptions } from '@mui/material/Autocomplete'
 import api from '../services/api.ts'
-import CategoryList from '../components/CategoryList'
-
-type AlertColor = 'success' | 'error' | 'warning' | 'info'
-
-export interface Category {
-    id: number
-    name: string
-    color: string
-    icon: string
-}
+import CategoryList from '../components/categories/CategoryList.tsx'
+import type { AlertColor } from '@mui/material/Alert'
+import type { Category } from '../components/categories/types'
 
 /* =========================
  * Icon helpers (base variants only)
@@ -150,6 +143,22 @@ export default function Categories() {
     const removeCategoryLocal = (id: number) =>
         setCategories((prev) => prev.filter((c) => c.id !== id))
 
+    function formatName(input: string, locale?: string): string {
+        return input.replace(/(\S+)/g, (word) => {
+            // Use array spread to handle Unicode characters (accents, emojis)
+            const chars = [...word]
+            if (chars.length < 2) return word // leave 1-char words as-is
+
+            const [first, ...rest] = chars
+            const firstUp = locale ? first.toLocaleUpperCase(locale) : first.toLocaleUpperCase()
+            const restLower = locale
+                ? rest.join('').toLocaleLowerCase(locale)
+                : rest.join('').toLocaleLowerCase()
+
+            return firstUp + restLower
+        })
+    }
+
     const resetForm = () => {
         setEditingId(null)
         setName('')
@@ -160,14 +169,27 @@ export default function Categories() {
         setIconError(null)
     }
 
+    const validateName = (value: string): boolean | undefined => {
+        const v = value.trim()
+        if (!v) {
+            setNameError('Name is required')
+            return false
+        } else if (v.length < 2) {
+            setNameError('Name should be at least 2 chars')
+            return false
+        } else if (v.length > 50) {
+            setNameError('Name should be 50 chars at most')
+            return false
+        }
+        setNameError(null)
+        return true
+    }
+
     const validateForm = () => {
         let ok = true
 
-        if (!name.trim()) {
-            setNameError('Name is required')
+        if (!validateName(name)) {
             ok = false
-        } else {
-            setNameError(null)
         }
 
         const normalized = toHex6(color)
@@ -194,7 +216,7 @@ export default function Categories() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!validateForm()) {
-            notify('Please fill all fields correctly.', 'error')
+            notify('Please fill all fields correctly', 'error')
             return
         }
 
@@ -250,12 +272,28 @@ export default function Categories() {
                             <TextField
                                 label="Name"
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                fullWidth
+                                onChange={(e) => {
+                                    setName(formatName(e.target.value))
+                                    validateName(e.target.value)
+                                }}
                                 required
                                 error={!!nameError}
-                                helperText={nameError || ' '}
+                                helperText={nameError || name.length + ' / 50'}
                                 color={editingId ? 'warning' : 'success'}
+                                slotProps={{
+                                    input: {
+                                        endAdornment: name ? (
+                                            <InputAdornment position="end">
+                                                <Button size="small" onClick={() => setName('')}>
+                                                    Clear
+                                                </Button>
+                                            </InputAdornment>
+                                        ) : null,
+                                    },
+                                }}
+                                sx={{
+                                    width: 550,
+                                }}
                             />
 
                             {/* Color picker (keep value as 6-digit hex) */}
@@ -265,7 +303,11 @@ export default function Categories() {
                                 value={color}
                                 onChange={(e) => setColor(toHex6(e.target.value))}
                                 sx={{ width: 140 }}
-                                inputProps={{ 'aria-label': 'Category color' }}
+                                slotProps={{
+                                    htmlInput: {
+                                        'aria-label': 'Category color',
+                                    },
+                                }}
                                 required
                                 error={!!colorError}
                                 helperText={colorError || ' '}
@@ -310,20 +352,22 @@ export default function Categories() {
                                         required
                                         error={!!iconError}
                                         helperText={iconError || ' '}
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            startAdornment: (
-                                                <>
-                                                    <InputAdornment position="start">
-                                                        <SelectedIcon fontSize="small" />
-                                                    </InputAdornment>
-                                                    {params.InputProps.startAdornment}
-                                                </>
-                                            ),
+                                        slotProps={{
+                                            input: {
+                                                ...params.InputProps,
+                                                startAdornment: (
+                                                    <>
+                                                        <InputAdornment position="start">
+                                                            <SelectedIcon fontSize="small" />
+                                                        </InputAdornment>
+                                                        {params.InputProps.startAdornment}
+                                                    </>
+                                                ),
+                                            },
                                         }}
                                     />
                                 )}
-                                sx={{ minWidth: 220, flex: 1 }}
+                                sx={{ width: 220 }}
                             />
                         </Stack>
 
