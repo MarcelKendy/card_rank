@@ -12,10 +12,8 @@ import {
     ListItemButton,
     Checkbox,
     ListItemText,
-    Button,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
-import CloseIcon from '@mui/icons-material/Close'
 import type { CategoryPickerProps } from './types'
 
 export default function CategoryPicker({
@@ -31,6 +29,7 @@ export default function CategoryPicker({
     const [query, setQuery] = React.useState('')
     const [working, setWorking] = React.useState<number[]>(selectedIds)
 
+    // Keep local state in sync whenever the Popper opens (or selection changes externally)
     React.useEffect(() => {
         if (open) {
             setQuery('')
@@ -45,14 +44,25 @@ export default function CategoryPicker({
 
     const canToggle = (id: number) => (working.includes(id) ? true : working.length < maxSelection)
 
+    // Toggle & APPLY IMMEDIATELY
     const toggle = (id: number) => {
-        setWorking((prev) =>
-            prev.includes(id)
-                ? prev.filter((x) => x !== id)
-                : prev.length < maxSelection
-                  ? [...prev, id]
-                  : prev
-        )
+        setWorking((prev) => {
+            const already = prev.includes(id)
+            let next: number[] = prev
+
+            if (already) {
+                next = prev.filter((x) => x !== id)
+            } else if (prev.length < maxSelection) {
+                next = [...prev, id]
+            } else {
+                // reached max; ignore
+                return prev
+            }
+
+            // Apply immediately (only when it actually changes)
+            if (next !== prev) onApply(next)
+            return next
+        })
     }
 
     const selectedCount = working.length
@@ -111,6 +121,7 @@ export default function CategoryPicker({
                             {filtered.map((cat) => {
                                 const checked = working.includes(cat.id)
                                 const disabled = !checked && !canToggle(cat.id)
+
                                 return (
                                     <ListItemButton
                                         key={cat.id}
@@ -149,6 +160,7 @@ export default function CategoryPicker({
                                     </ListItemButton>
                                 )
                             })}
+
                             {filtered.length === 0 && (
                                 <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
                                     No categories found
@@ -157,36 +169,7 @@ export default function CategoryPicker({
                         </List>
                     </Box>
 
-                    {/* Fixed actions */}
-                    <Box
-                        sx={(t) => ({
-                            p: 1,
-                            pt: 1.25,
-                            borderTop: `1px solid ${t.palette.divider}`,
-                            bgcolor: t.palette.customColors?.grey_6 ?? t.palette.background.paper,
-                        })}
-                    >
-                        <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                            <Button
-                                size="small"
-                                onClick={onClose}
-                                startIcon={<CloseIcon />}
-                                color="error"
-                            >
-                                Close
-                            </Button>
-                            <Button
-                                size="small"
-                                variant="contained"
-                                onClick={() => {
-                                    onApply(working)
-                                    onClose()
-                                }}
-                            >
-                                Apply
-                            </Button>
-                        </Stack>
-                    </Box>
+                    {/* No footer: changes apply immediately; click-away closes the popper */}
                 </Paper>
             </ClickAwayListener>
         </Popper>

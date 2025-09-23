@@ -19,6 +19,33 @@ import CategoryPicker from './CategoryPicker'
 import type { Category } from './types'
 import type { CardDialogProps } from './types'
 
+/* =========================
+   Config for multi-images
+   ========================= */
+const MAX_IMAGES = 3
+/** Choose a delimiter unlikely to appear in URLs. `||` is simple & readable. */
+export const IMAGES_DELIM = '||'
+
+function splitImages(value?: string | null): string[] {
+    if (!value) return Array(MAX_IMAGES).fill('')
+    const parts = String(value)
+        .split(IMAGES_DELIM)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    const arr = parts.slice(0, MAX_IMAGES)
+    while (arr.length < MAX_IMAGES) arr.push('')
+    return arr
+}
+
+/** Remove empty entries and join with delimiter. Returns null if none. */
+function joinImages(values: string[]): string | null {
+    const compact = values
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, MAX_IMAGES)
+    return compact.length ? compact.join(IMAGES_DELIM) : null
+}
+
 function formatName(input: string, locale?: string): string {
     return input.replace(/(\S+)/g, (word) => {
         const chars = [...word]
@@ -43,7 +70,10 @@ export default function CardDialog({
 }: CardDialogProps) {
     const [name, setName] = React.useState(initial?.name ?? '')
     const [description, setDescription] = React.useState(initial?.description ?? '')
-    const [image, setImage] = React.useState<string>(initial?.image_url ?? '')
+
+    // NEW: up to 3 images
+    const [images, setImages] = React.useState<string[]>(splitImages(initial?.image_url))
+
     const [nameError, setNameError] = React.useState<string | null>(null)
     const [descriptionError, setDescriptionError] = React.useState<string | null>(null)
 
@@ -61,7 +91,7 @@ export default function CardDialog({
         if (open) {
             setName(initial?.name ?? '')
             setDescription(initial?.description ?? '')
-            setImage(initial?.image_url ?? '')
+            setImages(splitImages(initial?.image_url)) // NEW: split joined value
             setCategoryIds(initial?.categories?.map((c) => c.id) ?? [])
             setNameError(null)
             setDescriptionError(null)
@@ -113,11 +143,14 @@ export default function CardDialog({
     }
 
     const handleSave = async () => {
+        // Compact images (remove gaps) and join with delimiter
+        const image_url = joinImages(images)
+
         const payload = {
             name: name.trim(),
             description: description.trim(),
-            image_url: image === '' ? null : image,
-            category_ids: categoryIds.slice(0, 4), // enforce limit
+            image_url, // send concatenated or null
+            category_ids: categoryIds.slice(0, 4),
         }
         if (!validateForm(payload)) {
             onNotify('Please fill all fields correctly', 'error')
@@ -135,6 +168,46 @@ export default function CardDialog({
     const selectedChips = categoryIds
         .map((id) => allCategories.find((c) => c.id === id))
         .filter(Boolean) as Category[]
+
+    // Common TextField styling (keeps your colors/behavior)
+    const tfSx = (t: any) => ({
+        '& label': { color: 'none' },
+        '& label.Mui-focused': {
+            color:
+                mode === 'add' ? t.palette.customColors.green_3 : t.palette.customColors.orange_3,
+        },
+        '& .MuiInputLabel-root.Mui-error': { color: 'error.main' },
+        '& .MuiInputLabel-root.Mui-disabled': { color: 'text.disabled' },
+        '& .MuiOutlinedInput-root': {
+            '& fieldset': { borderColor: 'none' },
+            '&:hover fieldset': {
+                borderColor:
+                    mode === 'add'
+                        ? t.palette.customColors.green_3
+                        : t.palette.customColors.orange_3,
+            },
+            '&.Mui-focused fieldset': {
+                borderColor:
+                    mode === 'add'
+                        ? t.palette.customColors.green_3
+                        : t.palette.customColors.orange_3,
+            },
+        },
+    })
+
+    // Handlers for image fields
+    const setImageAt = (idx: number, val: string) => {
+        setImages((prev) => {
+            const next = prev.slice()
+            next[idx] = val
+            // Optional: if user clears an earlier field, also clear following to maintain order.
+            // If you prefer to just allow gaps and compact on save, comment out lines below:
+            if (val.trim() === '') {
+                for (let i = idx + 1; i < MAX_IMAGES; i++) next[i] = ''
+            }
+            return next
+        })
+    }
 
     return (
         <Dialog
@@ -177,32 +250,7 @@ export default function CardDialog({
                         required
                         error={!!nameError}
                         helperText={nameError ?? `${name.length} / 50`}
-                        sx={(t) => ({
-                            '& label': { color: 'none' },
-                            '& label.Mui-focused': {
-                                color:
-                                    mode === 'add'
-                                        ? t.palette.customColors.green_3
-                                        : t.palette.customColors.orange_3,
-                            },
-                            '& .MuiInputLabel-root.Mui-error': { color: 'error.main' },
-                            '& .MuiInputLabel-root.Mui-disabled': { color: 'text.disabled' },
-                            '& .MuiOutlinedInput-root': {
-                                '& fieldset': { borderColor: 'none' },
-                                '&:hover fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                                '&.Mui-focused fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                            },
-                        })}
+                        sx={tfSx}
                     />
 
                     <TextField
@@ -217,77 +265,44 @@ export default function CardDialog({
                         required
                         error={!!descriptionError}
                         helperText={descriptionError ?? `${description.length} / 265`}
-                        sx={(t) => ({
-                            '& label': { color: 'none' },
-                            '& label.Mui-focused': {
-                                color:
-                                    mode === 'add'
-                                        ? t.palette.customColors.green_3
-                                        : t.palette.customColors.orange_3,
-                            },
-                            '& .MuiInputLabel-root.Mui-error': { color: 'error.main' },
-                            '& .MuiInputLabel-root.Mui-disabled': { color: 'text.disabled' },
-                            '& .MuiOutlinedInput-root': {
-                                '& fieldset': { borderColor: 'none' },
-                                '&:hover fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                                '&.Mui-focused fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                            },
-                        })}
+                        sx={tfSx}
                     />
 
-                    <TextField
-                        label="Image URL"
-                        value={image}
-                        onChange={(e) => setImage(e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        slotProps={{
-                            input: {
-                                endAdornment: image ? (
-                                    <InputAdornment position="end">
-                                        <Button size="small" onClick={() => setImage('')}>
-                                            Clear
-                                        </Button>
-                                    </InputAdornment>
-                                ) : null,
-                            },
-                        }}
-                        sx={(t) => ({
-                            '& label': { color: 'none' },
-                            '& label.Mui-focused': {
-                                color:
-                                    mode === 'add'
-                                        ? t.palette.customColors.green_3
-                                        : t.palette.customColors.orange_3,
-                            },
-                            '& .MuiInputLabel-root.Mui-error': { color: 'error.main' },
-                            '& .MuiInputLabel-root.Mui-disabled': { color: 'text.disabled' },
-                            '& .MuiOutlinedInput-root': {
-                                '& fieldset': { borderColor: 'none' },
-                                '&:hover fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                                '&.Mui-focused fieldset': {
-                                    borderColor:
-                                        mode === 'add'
-                                            ? t.palette.customColors.green_3
-                                            : t.palette.customColors.orange_3,
-                                },
-                            },
+                    {/* ============= NEW: up to 3 image URL fields ============= */}
+                    <Stack spacing={1}>
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 0.5 }}>
+                            Images (up to {MAX_IMAGES})
+                        </Typography>
+
+                        {images.map((val, i) => {
+                            const enabled = i === 0 || images[i - 1].trim() !== ''
+                            return (
+                                <TextField
+                                    key={i}
+                                    label={`Image URL ${i + 1}`}
+                                    value={val}
+                                    onChange={(e) => setImageAt(i, e.target.value)}
+                                    placeholder="https://example.com/image.jpg"
+                                    disabled={!enabled}
+                                    slotProps={{
+                                        input: {
+                                            endAdornment: val ? (
+                                                <InputAdornment position="end">
+                                                    <Button
+                                                        size="small"
+                                                        onClick={() => setImageAt(i, '')}
+                                                    >
+                                                        Clear
+                                                    </Button>
+                                                </InputAdornment>
+                                            ) : null,
+                                        },
+                                    }}
+                                    sx={tfSx}
+                                />
+                            )
                         })}
-                    />
+                    </Stack>
 
                     {/* Categories */}
                     <Box sx={{ boxShadow: 3, border: 'solid 1px grey', py: 1.5, px: 1.5 }}>

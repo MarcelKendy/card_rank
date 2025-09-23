@@ -130,26 +130,45 @@ async function deleteCard(id: number): Promise<void> {
  Skeleton tile (variable height; image area fixed)
  ===================================================================== */
 function CardTileSkeleton() {
-    const MEDIA_HEIGHT = 160
+    const theme = useTheme()
     return (
-        <Card variant="outlined" sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Skeleton variant="rectangular" animation="wave" height={MEDIA_HEIGHT} />
-            <CardContent sx={{ py: 1.25, px: 1.5 }}>
-                <Skeleton variant="text" width="70%" height={28} />
-                <Skeleton variant="text" width="90%" height={18} />
-                <Skeleton variant="text" width="80%" height={18} />
+        <Card
+            variant="outlined"
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '410px',
+                height: '410px',
+                maxHeight: '410px',
+                boxShadow:
+                    ' rgba(0, 0, 0, 0.46) 0px 2px 2px, rgba(0, 0, 0, 0.3) 0px 2px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;',
+                transition: (t) =>
+                    t.transitions.create(['box-shadow', 'transform'], {
+                        duration: t.transitions.duration.shorter,
+                    }),
+                willChange: 'transform',
+                '&:hover': {
+                    boxShadow:
+                        'rgba(68, 68, 68, 0.17) 0px -23px 25px 0px inset, rgba(83, 83, 83, 0.15) 0px -36px 30px 0px inset, rgba(58, 58, 58, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;',
+                    transform: 'scale(1.02)',
+                },
+                backgroundColor: theme.palette.customColors.grey_7,
+            }}
+        >
+            <Skeleton variant="rectangular" animation="wave" height={'66%'} />
+            <CardContent sx={{ mx: 1.5, my: 1, height: '18%', alignItems: 'stretch', p: 0 }}>
+                <Skeleton variant="text" width={'60%'} height={20} />
+                <Skeleton variant="text" width={'100%'} height={18} />
+                <Skeleton variant="text" width={'100%'} height={18} />
             </CardContent>
-            <Box sx={{ px: 1.5, pb: 1, pt: 0.5 }}>
+            <Box sx={{ mx: 1.5, mb: 1, height: '16%' }}>
                 <Stack direction="row" spacing={0.75}>
-                    <Skeleton variant="rounded" width={56} height={24} />
-                    <Skeleton variant="rounded" width={72} height={24} />
-                    <Skeleton variant="rounded" width={48} height={24} />
+                    <Skeleton variant="rounded" width={'20%'} height={20} />
+                    <Skeleton variant="rounded" width={'40%'} height={20} />
+                    <Skeleton variant="rounded" width={'20%'} height={20} />
+                    <Skeleton variant="rounded" width={'10%'} height={20} />
                 </Stack>
             </Box>
-            <CardActions sx={{ pt: 0, px: 1.5, pb: 1, justifyContent: 'flex-end' }}>
-                <Skeleton variant="circular" width={36} height={36} />
-                <Skeleton variant="circular" width={36} height={36} />
-            </CardActions>
         </Card>
     )
 }
