@@ -6,19 +6,22 @@ import {
     Dialog,
     DialogContent,
     IconButton,
+    Button,
     Stack,
     Tooltip,
     Typography,
+    Rating,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
+import NoPhotographyIcon from '@mui/icons-material/NoPhotography'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
-
+import useMediaQuery from '@mui/material/useMediaQuery'
 import CategoryPicker from './CategoryPicker'
 import type { CardTileProps } from './types'
 
@@ -54,9 +57,12 @@ function clamp(n: number, min: number, max: number) {
 export default function CardTile({
     card,
     allCategories,
+    loadingRating,
+    disableActions,
     onRequestEdit,
     onRequestDelete,
     onApplyCategories,
+    onApplyRating,
 }: CardTileProps) {
     const theme = useTheme()
 
@@ -79,6 +85,14 @@ export default function CardTile({
     )
     const next = React.useCallback(() => setIdx((i) => clampIdx(i + 1)), [clampIdx])
     const prev = React.useCallback(() => setIdx((i) => clampIdx(i - 1)), [clampIdx])
+
+    // Rating
+
+    // These will update automatically when screen size changes (viewport-based)
+    const isMdUp = useMediaQuery(theme.breakpoints.up('qhd'))
+
+    // Dynamically determine size (viewport-based)
+    const ratingSize: 'medium' | 'large' = isMdUp ? 'large' : 'medium'
 
     // Keep index in range when images array changes
     React.useEffect(() => {
@@ -178,7 +192,7 @@ export default function CardTile({
 
     return (
         <Card
-            className="parent"
+            className="card-tile"
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -186,29 +200,68 @@ export default function CardTile({
                 height: '410px',
                 maxHeight: '410px',
                 boxShadow:
-                    ' rgba(0, 0, 0, 0.46) 0px 2px 2px, rgba(0, 0, 0, 0.3) 0px 2px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;',
+                    ' rgba(0, 0, 0, 0.13) 1px 2px 2px 5px, rgba(0, 0, 0, 0.63) 0px 2px 13px -3px, rgba(0, 0, 0, 0.32) 0px -3px 0px inset;',
                 transition: (t) =>
-                    t.transitions.create(['box-shadow', 'transform'], {
-                        duration: t.transitions.duration.shorter,
-                    }),
+                    t.transitions.create(
+                        ['box-shadow', 'transform', 'border', 'opacity', 'filter'],
+                        {
+                            duration: t.transitions.duration.standard,
+                        }
+                    ),
                 willChange: 'transform',
+                border: 'solid 1px rgba(0, 0, 0, 0.34)',
                 '&:hover': {
                     boxShadow:
-                        'rgba(68, 68, 68, 0.17) 0px -23px 25px 0px inset, rgba(83, 83, 83, 0.15) 0px -36px 30px 0px inset, rgba(58, 58, 58, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;',
+                        'rgba(68, 68, 68, 0.4) 0px 10px 20px 10px inset, rgba(83, 83, 83, 0.25) 5px -26px 30px 5px inset, rgba(8, 8, 8, 0.9) 0px 10px 10px 5px inset, rgba(0, 0, 0, 0) 0px 0px 2px 0px, rgba(0, 0, 0, 0.09) 10px 4px 12px, rgba(0, 0, 0, 0.1) 4px 8px 4px, rgba(255, 255, 255, 0.1) 0px 0px 20px 5px, rgba(255, 255, 255, 0.21) 0px 0px 0px 0px;',
                     transform: 'scale(1.2)',
-                    zIndex: 3
+                    border: 'solid 0.5px rgba(255, 255, 255, 0.24)',
+                    zIndex: 3,
+                    filter: 'saturate(1.2)',
                 },
                 backgroundColor: theme.palette.customColors.grey_7,
             }}
         >
             {/* MEDIA: mini-carousel with slide transition */}
             <Box
-                sx={{ position: 'relative', height: '66%', overflow: 'hidden' }}
+                sx={{
+                    position: 'relative',
+                    height: '66%',
+                    overflow: 'hidden',
+                    border: 'solid 2px rgba(255, 255, 255, 0.1)',
+                }}
                 onMouseDown={onPointerDown as any}
                 onMouseUp={onPointerUp as any}
                 onTouchStart={onPointerDown as any}
                 onTouchEnd={onPointerUp as any}
             >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        px: 1.5,
+                        py: 0.5,
+                        height: '10%',
+                        width: '100%',
+                        position: 'absolute',
+                        zIndex: 3,
+                        backgroundColor: 'rgba(0, 0, 0, 0.55)',
+                    }}
+                >
+                    <Rating
+                        name="simple-controlled"
+                        value={card.rating}
+                        max={10}
+                        disabled={loadingRating}
+                        size={ratingSize}
+                        sx={{ opacity: loadingRating ? 0.4 : 1 }}
+                        onChange={(_, newValue) => {
+                            card.rating = newValue ?? 0
+                            onApplyRating(card)
+                        }}
+                    />
+                </Box>
+
                 {hasImages ? (
                     <>
                         {/* Viewport (click to open dialog) */}
@@ -360,18 +413,25 @@ export default function CardTile({
                             justifyContent: 'center',
                             objectFit: 'cover',
                             transition: 'transform 200ms ease',
-                            cursor: 'pointer',
+                            cursor: disableActions ? '' : 'pointer',
                             '.MuiCard-root:hover &': { transform: 'scale(1.06)' },
                         }}
                     >
-                        <AddPhotoAlternateIcon
+                       {!disableActions ? (<AddPhotoAlternateIcon
                             sx={{
                                 fontSize: '50px',
                                 opacity: 0.6,
                                 transition: 'opacity 200ms ease',
                                 '.MuiCard-root:hover &': { opacity: 1 },
                             }}
-                        />
+                        />) : (<NoPhotographyIcon
+                            sx={{
+                                fontSize: '50px',
+                                opacity: 0.6,
+                                transition: 'opacity 200ms ease',
+                                '.MuiCard-root:hover &': { opacity: 1 },
+                            }}
+                        />)} 
                     </Box>
                 )}
 
@@ -398,10 +458,11 @@ export default function CardTile({
                                 setImgOpen(true)
                                 showZoomHud()
                             }}
+                            size="small"
                             sx={{
                                 position: 'absolute',
                                 right: 8,
-                                top: 8,
+                                top: 38,
                                 bgcolor: 'rgba(0,0,0,0.5)',
                                 color: 'rgba(255, 255, 255, 1)',
                                 opacity: 0,
@@ -419,91 +480,95 @@ export default function CardTile({
                 )}
 
                 {/* Edit/Delete hover actions */}
-                <Tooltip
-                    title="Edit Card"
-                    placement="right"
-                    slotProps={{
-                        tooltip: {
-                            sx: (t) => ({
-                                bgcolor: t.palette.warning.main,
-                                color: t.palette.getContrastText(t.palette.warning.main),
-                                boxShadow: t.shadows[3],
-                                fontWeight: 700,
-                            }),
-                        },
-                        arrow: { sx: (t) => ({ color: t.palette.warning.main }) },
-                    }}
-                >
-                    <IconButton
-                        aria-label="edit"
-                        color="warning"
-                        size="small"
-                        onClick={() => onRequestEdit(card)}
-                        sx={{
-                            position: 'absolute',
-                            left: 48,
-                            top: 8,
-                            bgcolor: 'rgba(0, 0, 0, 0.5)',
-                            color: theme.palette.customColors.orange_3,
-                            opacity: 0,
-                            border: 'solid 1px ' + theme.palette.customColors.orange_3,
-                            transition: 'opacity 150ms ease, background-color 150ms ease',
-                            '.MuiCard-root:hover &': { opacity: 1 },
-                            '&:hover': {
-                                bgcolor: theme.palette.customColors.orange_3,
-                                color: 'rgba(255, 255, 255, 1)',
-                            },
-                        }}
-                    >
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                {disableActions || (
+                    <Box>
+                        <Tooltip
+                            title="Edit Card"
+                            placement="right"
+                            slotProps={{
+                                tooltip: {
+                                    sx: (t) => ({
+                                        bgcolor: t.palette.warning.main,
+                                        color: t.palette.getContrastText(t.palette.warning.main),
+                                        boxShadow: t.shadows[3],
+                                        fontWeight: 700,
+                                    }),
+                                },
+                                arrow: { sx: (t) => ({ color: t.palette.warning.main }) },
+                            }}
+                        >
+                            <IconButton
+                                aria-label="edit"
+                                color="warning"
+                                size="small"
+                                onClick={() => onRequestEdit(card)}
+                                sx={{
+                                    position: 'absolute',
+                                    left: 48,
+                                    top: 38,
+                                    bgcolor: theme.palette.customColors.orange_3,
+                                    color: 'rgba(255, 255, 255, 1)',
+                                    opacity: 0,
+                                    border: 'solid 1px ' + theme.palette.customColors.orange_3,
+                                    transition: 'opacity 150ms ease, background-color 150ms ease',
+                                    '.MuiCard-root:hover &': { opacity: 1 },
+                                    '&:hover': {
+                                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                                        color: theme.palette.customColors.orange_3,
+                                    },
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
 
-                <Tooltip
-                    title="Delete Card"
-                    placement="right"
-                    slotProps={{
-                        tooltip: {
-                            sx: (t) => ({
-                                bgcolor: t.palette.error.main,
-                                color: t.palette.getContrastText(t.palette.error.main),
-                                boxShadow: t.shadows[3],
-                                fontWeight: 700,
-                            }),
-                        },
-                        arrow: { sx: (t) => ({ color: t.palette.error.main }) },
-                    }}
-                >
-                    <IconButton
-                        aria-label="delete"
-                        color="error"
-                        size="small"
-                        onClick={() => onRequestDelete(card)}
-                        sx={{
-                            position: 'absolute',
-                            left: 8,
-                            top: 8,
-                            bgcolor: 'rgba(0, 0, 0, 0.5)',
-                            color: theme.palette.customColors.red_3,
-                            opacity: 0,
-                            border: 'solid 1px ' + theme.palette.customColors.red_3,
-                            transition: 'opacity 150ms ease, background-color 150ms ease',
-                            '.MuiCard-root:hover &': { opacity: 1 },
-                            '&:hover': {
-                                bgcolor: theme.palette.customColors.red_3,
-                                color: 'rgba(255, 255, 255, 1)',
-                            },
-                        }}
-                    >
-                        <DeleteIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                        <Tooltip
+                            title="Delete Card"
+                            placement="right"
+                            slotProps={{
+                                tooltip: {
+                                    sx: (t) => ({
+                                        bgcolor: t.palette.error.main,
+                                        color: t.palette.getContrastText(t.palette.error.main),
+                                        boxShadow: t.shadows[3],
+                                        fontWeight: 700,
+                                    }),
+                                },
+                                arrow: { sx: (t) => ({ color: t.palette.error.main }) },
+                            }}
+                        >
+                            <IconButton
+                                aria-label="delete"
+                                color="error"
+                                size="small"
+                                onClick={() => onRequestDelete(card)}
+                                sx={{
+                                    position: 'absolute',
+                                    left: 8,
+                                    top: 38,
+                                    bgcolor: theme.palette.customColors.red_3,
+                                    color: 'rgba(255, 255, 255, 1)',
+                                    opacity: 0,
+                                    border: 'solid 1px ' + theme.palette.customColors.red_3,
+                                    transition: 'opacity 150ms ease, background-color 150ms ease',
+                                    '.MuiCard-root:hover &': { opacity: 1 },
+                                    '&:hover': {
+                                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                                        color: theme.palette.customColors.red_3,
+                                    },
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                )}
             </Box>
 
             {/* CONTENT */}
             <Box
                 onClick={() => onRequestEdit(card)}
-                sx={{ mx: 1.5, my: 1, alignItems: 'stretch', cursor: 'pointer', height: '18%' }}
+                sx={{ mx: 1.5, my: 1, alignItems: 'stretch', cursor: disableActions ? '': 'pointer', height: '18%' }}
             >
                 <Typography
                     gutterBottom
@@ -534,7 +599,7 @@ export default function CardTile({
             </Box>
 
             {/* CATEGORIES */}
-            <Box sx={{ mx: 1.5, mb: 1, height: '16%' }}>
+            <Box sx={{ mx: 1.5, mb: 1, height: '16%', position: 'relative' }}>
                 <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
                     {card.categories.length > 0 ? (
                         card.categories.slice(0, maxCats).map((cat) => (
@@ -561,10 +626,10 @@ export default function CardTile({
                                         bgcolor: bg,
                                         color: contrast,
                                         textShadow: contrast === '#000' ? 'none' : TITLE_SHADOW,
-                                        '& .MuiChip-deleteIcon': {
-                                            color: 'inherit',
-                                            '&:hover': { color: 'inherit' },
-                                        },
+                                        '.MuiCard-root:hover &': { opacity: disableActions ? 1 : 0.5 },
+                                        boxShadow:
+                                            'rgba(0, 0, 0, 0.24) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;',
+                                        border: 'solid 1px rgba(255, 255, 255, 0.4)',
                                     }
                                 }}
                             />
@@ -574,36 +639,59 @@ export default function CardTile({
                             size="small"
                             label="No category"
                             variant="outlined"
-                            sx={{ cursor: 'pointer', textShadow: TITLE_SHADOW }}
+                            sx={{
+                                cursor: 'pointer',
+                                textShadow: TITLE_SHADOW,
+                                '.MuiCard-root:hover &': { opacity: 0.5 },
+                            }}
                         />
                     )}
 
                     {/* Always show "Edit" (pencil) */}
-                    <Tooltip title="Edit categories" placement="top">
-                        <IconButton
-                            onClick={openPicker}
-                            sx={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.37)',
-                                color: theme.palette.customColors.white_blue,
-                                border: 'solid 1px',
-                                height: 24,
-                                width: 24,
-                            }}
-                        >
-                            <EditIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                    </Tooltip>
+                    {disableActions || (
+                        <Box>
+                            <Tooltip title="Edit categories" placement="top">
+                                <Button
+                                    size="small"
+                                    onClick={openPicker}
+                                    sx={{
+                                        border: 'solid 1px',
+                                        position: 'absolute',
+                                        left: '50%',
+                                        top: '50%',
+                                        height: '25px',
+                                        transform: 'translateX(-50%) translateY(-50%)',
+                                        bgcolor: theme.palette.customColors.white_blue,
+                                        color: theme.palette.customColors.grey_7,
+                                        opacity: 0,
+                                        transition:
+                                            'opacity 250ms ease, background-color 150ms ease',
+                                        '.MuiCard-root:hover &': { opacity: 1 },
+                                        '&:hover': {
+                                            bgcolor: theme.palette.customColors.grey_7,
+                                            color: theme.palette.customColors.white_blue,
+                                        },
+                                    }}
+                                >
+                                    <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                        Categories
+                                    </Typography>
+                                    <EditIcon sx={{ pl: 1 }} />
+                                </Button>
+                            </Tooltip>
 
-                    <CategoryPicker
-                        open={pickerOpen}
-                        anchorEl={pickerAnchor}
-                        onClose={closePicker}
-                        allCategories={allCategories}
-                        selectedIds={assignedIds}
-                        onApply={(ids) => onApplyCategories(card.id, ids)}
-                        maxSelection={maxCats}
-                        title="Edit categories"
-                    />
+                            <CategoryPicker
+                                open={pickerOpen}
+                                anchorEl={pickerAnchor}
+                                onClose={closePicker}
+                                allCategories={allCategories}
+                                selectedIds={assignedIds}
+                                onApply={(ids) => onApplyCategories(card.id, ids)}
+                                maxSelection={maxCats}
+                                title="Edit categories"
+                            />
+                        </Box>
+                    )}
                 </Stack>
             </Box>
 
@@ -803,7 +891,7 @@ export default function CardTile({
                                 <Chip
                                     size="small"
                                     label={`${Math.round(zoom * 100)}%`}
-                                    icon={<ZoomInIcon/>}
+                                    icon={<ZoomInIcon />}
                                     sx={{
                                         position: 'absolute',
                                         left: '50%',

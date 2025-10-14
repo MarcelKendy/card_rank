@@ -64,4 +64,19 @@ declare module '@mui/material/styles' {
     interface PaletteOptions {
         customColors?: Palette['customColors']
     }
+
+    interface BreakpointOverrides {
+        xs: true
+        sp: true
+        mp: true
+        lp: true
+        sm: true
+        md: true
+        tab: true
+        lg: true
+        xl: true
+        xxl: true
+        fhd: true
+        qhd: true
+    }
 }

@@ -11,8 +11,9 @@ export type CardModel = {
     id: number
     name: string
     description: string
+    rating: number | 0
     image_url?: string | null // fixed typing
-    categories: Category[]
+    categories: Category[] 
 }
 
 export type CategoryPickerProps = {
@@ -44,7 +45,10 @@ export type CardDialogProps = {
 export type CardTileProps = {
     card: CardModel
     allCategories: Category[]
+    loadingRating: boolean
+    disableActions: boolean
     onRequestEdit: (card: CardModel) => void
     onRequestDelete: (card: CardModel) => void
     onApplyCategories: (cardId: number, newCategoryIds: number[]) => Promise<void>
+    onApplyRating: (card: CardModel) => Promise<void>
 }

@@ -10,6 +10,7 @@ import {
     Alert,
     Autocomplete,
     InputAdornment,
+    Box,
 } from '@mui/material'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import EditIcon from '@mui/icons-material/Edit'
@@ -263,7 +264,7 @@ export default function Categories() {
     const SelectedIcon = resolveIcon(icon)
 
     return (
-        <Container maxWidth="xl">
+        <Box>
             {/* Form Card */}
             <Card variant="outlined" sx={{ mb: 3, backgroundColor: 'rgb(50, 50, 50)' }}>
                 <CardContent>
@@ -421,6 +422,6 @@ export default function Categories() {
                     {snackMsg}
                 </Alert>
             </Snackbar>
-        </Container>
+        </Box>
     )
 }

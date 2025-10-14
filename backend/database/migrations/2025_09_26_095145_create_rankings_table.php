@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cards', function (Blueprint $table) {
+        Schema::create('rankings', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->text('description');
-            $table->tinyInteger('rating');
-            $table->longText('image_url')->nullable(); 
+            $table->text('description');            
+            $table->text('image_url')->nullable();    
+            $table->text('tiers')->nullable();            
+            $table->text('filters')->nullable(); 
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cards');
+        Schema::dropIfExists('rankings');
     }
 };

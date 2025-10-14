@@ -24,6 +24,7 @@ import PageHeader from './components/app/PageHeader.tsx'
 import PageFooter from './components/app/PageFooter.tsx'
 import Categories from './pages/Categories.tsx'
 import Cards from './pages/Cards.tsx'
+import Rankings from './pages/Rankings.tsx'
 import theme from './theme'
 
 const drawerWidth = 280 // a bit wider to breathe with icons
@@ -239,14 +240,13 @@ export default function App() {
                     >
                         {/* spacer for AppBar height */}
                         <Toolbar />
-
-                        <Box sx={{ width: '100%', mx: 'auto', marginTop: 4 }}>
-                            <PageHeader />
-                            <Box sx={{ marginY: 6 }}>
+                        <PageHeader />
+                        <Box>
+                            <Box sx={{ my: 4, mx: 12 }}>
                                 <Routes>
                                     <Route path="/categories" element={<Categories />} />
-                                     <Route path="/cards" element={<Cards />} /> 
-                                    {/* <Route path="/rankings" element={<Rankings />} /> */}
+                                    <Route path="/cards" element={<Cards />} />
+                                    <Route path="/rankings" element={<Rankings />} />
                                 </Routes>
                             </Box>
                         </Box>

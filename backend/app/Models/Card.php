@@ -12,11 +12,17 @@ class Card extends Model
     protected $fillable = [
         'name',
         'description',
+        'rating',
         'image_url',
     ];
 
     public function categories()
     {
         return $this->belongsToMany(Category::class, 'card_categories')->withTimestamps();
+    }
+
+    public function rankings()
+    {
+        return $this->belongsToMany(Ranking::class, 'ranking_cards')->withPivot('placement', 'tier')->withTimestamps();
     }
 }

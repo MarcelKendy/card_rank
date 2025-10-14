@@ -10,6 +10,7 @@ import {
     InputAdornment,
     Stack,
     TextField,
+    Rating,
     Typography,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
@@ -19,6 +20,7 @@ import CategoryPicker from './CategoryPicker'
 import type { Category } from './types'
 import type { CardDialogProps } from './types'
 
+const TITLE_SHADOW = '0px 1px 10px rgba(0, 0, 0, 1)'
 /* =========================
    Config for multi-images
    ========================= */
@@ -70,6 +72,7 @@ export default function CardDialog({
 }: CardDialogProps) {
     const [name, setName] = React.useState(initial?.name ?? '')
     const [description, setDescription] = React.useState(initial?.description ?? '')
+    const [rating, setRating] = React.useState(initial?.rating ?? 0)
 
     // NEW: up to 3 images
     const [images, setImages] = React.useState<string[]>(splitImages(initial?.image_url))
@@ -91,6 +94,7 @@ export default function CardDialog({
         if (open) {
             setName(initial?.name ?? '')
             setDescription(initial?.description ?? '')
+            setRating(initial?.rating ?? 0)
             setImages(splitImages(initial?.image_url)) // NEW: split joined value
             setCategoryIds(initial?.categories?.map((c) => c.id) ?? [])
             setNameError(null)
@@ -133,6 +137,7 @@ export default function CardDialog({
     const validateForm = (payload: {
         name: string
         description: string
+        rating: number
         image_url?: string | null
         category_ids?: number[]
     }) => {
@@ -150,6 +155,7 @@ export default function CardDialog({
             name: name.trim(),
             description: description.trim(),
             image_url, // send concatenated or null
+            rating,
             category_ids: categoryIds.slice(0, 4),
         }
         if (!validateForm(payload)) {
@@ -270,7 +276,7 @@ export default function CardDialog({
 
                     {/* ============= NEW: up to 3 image URL fields ============= */}
                     <Stack spacing={1}>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 0.5 }}>
+                        <Typography variant="subtitle2" fontWeight={700}>
                             Images (up to {MAX_IMAGES})
                         </Typography>
 
@@ -298,11 +304,26 @@ export default function CardDialog({
                                             ) : null,
                                         },
                                     }}
-                                    sx={tfSx}
+                                    sx={[tfSx, { display: enabled ? 'flex' : 'none' }]}
                                 />
                             )
                         })}
                     </Stack>
+
+                    <Box>
+                        <Typography sx={{ pb: 0.5 }} variant="subtitle2" fontWeight={700}>
+                            Rating
+                        </Typography>
+                        <Rating
+                            name="simple-controlled"
+                            value={rating}
+                            max={10}
+                            size="large"
+                            onChange={(_, newValue) => {
+                                setRating(newValue ?? 0)
+                            }}
+                        />
+                    </Box>
 
                     {/* Categories */}
                     <Box sx={{ boxShadow: 3, border: 'solid 1px grey', py: 1.5, px: 1.5 }}>
@@ -339,9 +360,11 @@ export default function CardDialog({
                                                 bgcolor: bg,
                                                 color: contrast,
                                                 textShadow:
-                                                    contrast === '#000'
-                                                        ? 'none'
-                                                        : '0px 1px 10px rgba(0, 0, 0, 1)',
+                                                    contrast === '#000' ? 'none' : TITLE_SHADOW,
+                                                '.MuiCard-root:hover &': { opacity: 0.5 },
+                                                boxShadow:
+                                                    'rgba(0, 0, 0, 0.24) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;',
+                                                border: 'solid 1px rgba(255, 255, 255, 0.4)',
                                                 '& .MuiChip-deleteIcon': {
                                                     color: 'inherit',
                                                     '&:hover': { color: 'inherit' },

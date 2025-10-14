@@ -2,6 +2,27 @@ import { createTheme } from '@mui/material/styles'
 import { blue, green, red, yellow, orange, grey, purple, teal } from '@mui/material/colors'
 
 const theme = createTheme({
+    breakpoints: {
+        values: {
+            // Phones (CSS pixel widths frequently seen today)
+            xs: 0, // base
+            sp: 360, // small phones (360x800 is the single most common mobile viewport)
+            mp: 390, // modern iPhone/Android CSS widths (e.g., 390x844)
+            lp: 412, // larger phones (412x915 etc.)
+
+            // Tablets
+            sm: 600, // big phones / small tablets
+            md: 768, // classic tablet portrait (iPad 768x1024)
+            tab: 820, // larger/newer tablets (810/820/834 widths)
+
+            // Laptops / Desktops
+            lg: 1024, // small laptops / tablet landscape starting point
+            xl: 1280, // HD-class desktops start
+            xxl: 1440, // very common desktop width today
+            fhd: 1920, // Full HD (1080p) monitors
+            qhd: 2560, // 1440p / QHD (and many 27"+ displays)
+        },
+    },
     palette: {
         mode: 'dark',
         primary: { main: blue[500] },

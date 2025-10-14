@@ -54,9 +54,8 @@ export default function PageHeader() {
                         width: '100%',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center',
-                        px: 3,
-                        py: 2,
+                        alignItems: 'center',                        
+                        py: 3,
                         // If this sits under a fixed AppBar and you already render a <Toolbar /> spacer,
                         // keep mt at 0. If it's placed elsewhere under the AppBar, adjust as needed.
                         mt: 0,
