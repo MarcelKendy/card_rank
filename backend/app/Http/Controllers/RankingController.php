@@ -171,4 +171,5 @@ class RankingController extends Controller
 
         return $payload;
     }
+
 }

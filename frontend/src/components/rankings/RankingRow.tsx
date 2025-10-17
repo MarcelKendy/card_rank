@@ -1,5 +1,4 @@
 // components/rankings/RankingRow.tsx
-import * as React from 'react'
 import { Box, Paper, Stack, IconButton, Typography, Chip, Tooltip, Avatar } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import EditIcon from '@mui/icons-material/Edit'

@@ -12,7 +12,7 @@ class Category extends Model
     protected $fillable = [
         'name',
         'color',
-        'icon'
+        'image_url'
     ];
 
     public function cards()

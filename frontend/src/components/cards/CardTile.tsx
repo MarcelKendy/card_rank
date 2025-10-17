@@ -10,10 +10,11 @@ import {
     Stack,
     Tooltip,
     Typography,
-    Rating,
+    Rating
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
+import SmartDisplayIcon from '@mui/icons-material/SmartDisplay'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
@@ -25,34 +26,94 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import CategoryPicker from './CategoryPicker'
 import type { CardTileProps } from './types'
 
+// ====== Visual constants (unchanged) ======
 const TITLE_SHADOW = '0px 1px 10px rgba(0, 0, 0, 1)'
 
-// === Shared image config (keep same as in CardDialog) ===
-const IMAGES_DELIM = '||' // <— fixed delimiter
-const MAX_IMAGES = 3
+// ====== Media parsing & config (NEW) ======
+type MediaKind = 'image' | 'video' | 'youtube'
+type MediaItem = { url: string; kind: MediaKind }
 
-// === Mini-carousel animation + dialog styling ===
-const TILE_SLIDE_MS = 350
-const DLG_SLIDE_MS = 400
-const DIALOG_BACKDROP_OPACITY = 0.55 // tweak the translucency of the backdrop
+const MAX_MEDIA = 3
+// Accept either "\n\n" OR "||" as multi-URL delimiter
+const MEDIA_DELIM = /\n\n|\|\|/
 
-// === Dialog zoom config ===
-const DLG_ZOOM_MIN = 1
-const DLG_ZOOM_MAX = 4
-const DLG_ZOOM_STEP = 0.2
+const VIDEO_EXTS = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']
+const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif']
 
-function splitImages(value?: string | null): string[] {
+function extOf(url: string) {
+    try {
+        const u = new URL(
+            url,
+            typeof window !== 'undefined' ? window.location.href : 'http://localhost'
+        )
+        const pathname = u.pathname.toLowerCase()
+        return pathname.slice(pathname.lastIndexOf('.')) || ''
+    } catch {
+        const lower = String(url).toLowerCase().split('?')[0]
+        return lower.slice(lower.lastIndexOf('.')) || ''
+    }
+}
+function isYouTube(url: string) {
+    const s = String(url)
+    return /(?:youtube\.com|youtu\.be)\//i.test(s)
+}
+function extractYouTubeId(url: string): string | null {
+    // Handles: https://www.youtube.com/watch?v=ID, https://youtu.be/ID, https://www.youtube.com/shorts/ID
+    const m1 = url.match(/[?&]v=([\w-]{11})/)
+    if (m1?.[1]) return m1[1]
+    const m2 = url.match(/youtu\.be\/([\w-]{11})/)
+    if (m2?.[1]) return m2[1]
+    const m3 = url.match(/youtube\.com\/shorts\/([\w-]{11})/)
+    if (m3?.[1]) return m3[1]
+    return null
+}
+function toYouTubeEmbed(
+    url: string,
+    { autoplay = true, mute = true, loop = true, controls = 0 } = {}
+) {
+    const id = extractYouTubeId(url)
+    if (!id) return null
+    const params = new URLSearchParams()
+    if (autoplay) params.set('autoplay', '1')
+    if (mute) params.set('mute', '1')
+    if (loop) {
+        params.set('loop', '1')
+        params.set('playlist', id) // required by YouTube to actually loop
+    }
+    params.set('controls', String(controls))
+    params.set('modestbranding', '1')
+    params.set('rel', '0')
+    return `https://www.youtube.com/embed/${id}?${params.toString()}`
+}
+function getMediaKind(url: string): MediaKind {
+    if (isYouTube(url)) return 'youtube'
+    const ext = extOf(url)
+    if (VIDEO_EXTS.includes(ext)) return 'video'
+    // GIFs are treated as images; <img> will animate them
+    return IMAGE_EXTS.includes(ext) ? 'image' : 'image'
+}
+function splitMedia(value?: string | null): MediaItem[] {
     if (!value) return []
     return String(value)
-        .split(IMAGES_DELIM)
+        .split(MEDIA_DELIM)
         .map((s) => s.trim())
         .filter(Boolean)
-        .slice(0, MAX_IMAGES)
+        .slice(0, MAX_MEDIA)
+        .map((url) => ({ url, kind: getMediaKind(url) }))
 }
-
 function clamp(n: number, min: number, max: number) {
     return Math.min(max, Math.max(min, n))
 }
+
+// ====== Anim & dialog config (unchanged intent) ======
+const TILE_SLIDE_MS = 350
+const DLG_SLIDE_MS = 400
+const DIALOG_BACKDROP_OPACITY = 0.55
+
+// Zoom config
+const DLG_ZOOM_MIN = 1
+const DLG_ZOOM_MAX = 4
+const DLG_ZOOM_STEP = 0.2
 
 export default function CardTile({
     card,
@@ -66,7 +127,8 @@ export default function CardTile({
 }: CardTileProps) {
     const theme = useTheme()
 
-    /* ---------------------- Category picker state ---------------------- */
+    const [controlsOn, setControlsOn] = React.useState(false)
+    // --- Category picker state (unchanged) ---
     const [pickerAnchor, setPickerAnchor] = React.useState<HTMLElement | null>(null)
     const openPicker = (e: React.MouseEvent<HTMLElement>) => setPickerAnchor(e.currentTarget)
     const closePicker = () => setPickerAnchor(null)
@@ -74,59 +136,51 @@ export default function CardTile({
     const maxCats = 4
     const assignedIds = card.categories.map((c) => c.id)
 
-    /* ------------------------ Images & carousel ------------------------ */
-    const images = React.useMemo(() => splitImages(card.image_url), [card.image_url])
-    const hasImages = images.length > 0
-
+    // --- Media & carousel (replaces "images") ---
+    const media = React.useMemo(() => splitMedia(card.image_url), [card.image_url])
+    const hasMedia = media.length > 0
     const [idx, setIdx] = React.useState(0)
     const clampIdx = React.useCallback(
-        (i: number) => (images.length ? (i + images.length) % images.length : 0),
-        [images.length]
+        (i: number) => (media.length ? (i + media.length) % media.length : 0),
+        [media.length]
     )
     const next = React.useCallback(() => setIdx((i) => clampIdx(i + 1)), [clampIdx])
     const prev = React.useCallback(() => setIdx((i) => clampIdx(i - 1)), [clampIdx])
 
-    // Rating
-
-    // These will update automatically when screen size changes (viewport-based)
+    // Rating size responsive (unchanged)
     const isMdUp = useMediaQuery(theme.breakpoints.up('qhd'))
-
-    // Dynamically determine size (viewport-based)
     const ratingSize: 'medium' | 'large' = isMdUp ? 'large' : 'medium'
 
-    // Keep index in range when images array changes
+    // Keep index in range when media array changes
     React.useEffect(() => {
-        if (idx >= images.length) setIdx(0)
-    }, [images.length, idx])
+        if (idx >= media.length) setIdx(0)
+    }, [media.length, idx])
 
-    /* ---------------------- Full-screen dialog ------------------------ */
+    // --- Full-screen dialog / zoom state (unchanged logic; generalized to "media") ---
     const [imgOpen, setImgOpen] = React.useState(false)
 
-    // ---- Zoom HUD (Chip) state ----
+    // Zoom HUD state
     const [zoomHudVisible, setZoomHudVisible] = React.useState(false)
     const hudTimerRef = React.useRef<number | null>(null)
-
     const showZoomHud = React.useCallback(() => {
         setZoomHudVisible(true)
         if (hudTimerRef.current) window.clearTimeout(hudTimerRef.current)
         hudTimerRef.current = window.setTimeout(() => {
             setZoomHudVisible(false)
-        }, 2000) // Chip stays visible for 1s after the last wheel tick
+        }, 2000)
     }, [])
-
-    // Clean up timer on unmount
     React.useEffect(() => {
         return () => {
             if (hudTimerRef.current) window.clearTimeout(hudTimerRef.current)
         }
     }, [])
 
-    // Zoom state (dialog only): amount + origin (%)
+    // Zoom state: amount + origin (%)
     const [zoom, setZoom] = React.useState<number>(1)
     const [origin, setOrigin] = React.useState<{ x: number; y: number }>({ x: 50, y: 50 })
     const dialogViewportRef = React.useRef<HTMLDivElement>(null)
 
-    // Reset zoom when opening dialog or changing image
+    // Reset zoom when opening dialog or changing media
     React.useEffect(() => {
         if (imgOpen) {
             setZoom(1)
@@ -134,26 +188,23 @@ export default function CardTile({
         }
     }, [imgOpen, idx])
 
-    // Mouse wheel to control zoom (no hover zoom in dialog)
+    // Mouse wheel to control zoom (dialog only)
     const onWheelZoom = (e: React.WheelEvent) => {
-        if (!imgOpen || !hasImages) return
-        e.preventDefault()
-
+        if (!imgOpen || !hasMedia) return
+        if (controlsOn) return
+        e?.preventDefault() ?? ''
         const rect = dialogViewportRef.current?.getBoundingClientRect()
         if (rect) {
             const x = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100)
             const y = clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100)
             setOrigin({ x, y })
         }
-
         const sign = e.deltaY < 0 ? 1 : -1 // wheel up -> zoom in
         setZoom((z) => clamp(z + sign * DLG_ZOOM_STEP, DLG_ZOOM_MIN, DLG_ZOOM_MAX))
-
-        // 👇 show the chip briefly whenever zoom changes
         showZoomHud()
     }
 
-    // Swipe/drag (tile + dialog)
+    // Swipe/drag for tile + dialog (unchanged)
     const dragStartX = React.useRef<number | null>(null)
     const onPointerDown = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
         const x =
@@ -182,9 +233,9 @@ export default function CardTile({
         }
     }
 
-    // Keyboard navigation in dialog
+    // Keyboard navigation in dialog (unchanged)
     const onDialogKeyDown = (e: React.KeyboardEvent) => {
-        if (!hasImages) return
+        if (!hasMedia) return
         if (e.key === 'ArrowRight') next()
         else if (e.key === 'ArrowLeft') prev()
         else if (e.key === 'Escape') setImgOpen(false)
@@ -221,7 +272,7 @@ export default function CardTile({
                 backgroundColor: theme.palette.customColors.grey_7,
             }}
         >
-            {/* MEDIA: mini-carousel with slide transition */}
+            {/* MEDIA: mini-carousel */}
             <Box
                 sx={{
                     position: 'relative',
@@ -234,6 +285,7 @@ export default function CardTile({
                 onTouchStart={onPointerDown as any}
                 onTouchEnd={onPointerUp as any}
             >
+                {/* Rating strip */}
                 <Box
                     sx={{
                         display: 'flex',
@@ -262,7 +314,7 @@ export default function CardTile({
                     />
                 </Box>
 
-                {hasImages ? (
+                {hasMedia ? (
                     <>
                         {/* Viewport (click to open dialog) */}
                         <Box
@@ -276,8 +328,10 @@ export default function CardTile({
                                 overflow: 'hidden',
                                 position: 'relative',
                                 cursor: 'zoom-in',
-                                // Only zoom the ACTIVE slide image on hover
-                                '.MuiCard-root:hover & [data-active="true"] img': {
+                                // Hover zoom only on active slide (img, video, iframe)
+                                '.MuiCard-root:hover & [data-active="true"] img, \
+                 .MuiCard-root:hover & [data-active="true"] video, \
+                 .MuiCard-root:hover & [data-active="true"] iframe': {
                                     transform: 'scale(1.06)',
                                 },
                             }}
@@ -292,43 +346,87 @@ export default function CardTile({
                                     transform: `translateX(-${idx * 100}%)`,
                                 }}
                             >
-                                {images.map((src, i) => (
-                                    <Box
-                                        key={i}
-                                        data-active={i === idx ? 'true' : undefined}
-                                        sx={{
-                                            flex: '0 0 100%',
-                                            width: '100%',
-                                            height: '100%',
-                                            position: 'relative',
-                                            overflow: 'hidden', // clip zoomed image within slide
-                                        }}
-                                    >
+                                {media.map((m, i) => {
+                                    const active = i === idx
+                                    const commonSlideSx = {
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover' as const,
+                                        display: 'block',
+                                        userSelect: 'none' as const,
+                                        transform: 'scale(1)',
+                                        transition: 'transform 200ms ease',
+                                    }
+                                    return (
                                         <Box
-                                            component="img"
-                                            src={src}
-                                            alt={`${card.name} ${i + 1}`}
+                                            key={i}
+                                            data-active={active ? 'true' : undefined}
                                             sx={{
+                                                flex: '0 0 100%',
                                                 width: '100%',
                                                 height: '100%',
-                                                objectFit: 'cover',
-                                                display: 'block',
-                                                userSelect: 'none',
-                                                transform: 'scale(1)', // base
-                                                transition: 'transform 200ms ease', // hover zoom only on active
+                                                position: 'relative',
+                                                overflow: 'hidden', // clip zoomed media within slide
                                             }}
-                                            draggable={false}
-                                        />
-                                    </Box>
-                                ))}
+                                        >
+                                            {m.kind === 'image' && (
+                                                <Box
+                                                    component="img"
+                                                    src={m.url}
+                                                    alt={`${card.name} ${i + 1}`}
+                                                    sx={commonSlideSx}
+                                                    draggable={false}
+                                                    loading="lazy"
+                                                />
+                                            )}
+                                            {m.kind === 'video' && (
+                                                <video
+                                                    src={m.url}
+                                                    style={
+                                                        {
+                                                            ...commonSlideSx,
+                                                            pointerEvents: controlsOn
+                                                                ? 'auto'
+                                                                : 'none', // ✅ enable interaction
+                                                        } as any
+                                                    }
+                                                    autoPlay
+                                                    muted={!controlsOn} // keep muted in zoom mode to avoid autoplay blocks
+                                                    loop
+                                                    playsInline
+                                                    controls={controlsOn} // ✅ show native controls in control mode
+                                                    preload="auto"
+                                                />
+                                            )}
+                                            {m.kind === 'youtube' && (
+                                                <iframe
+                                                    src={toYouTubeEmbed(m.url) ?? m.url}
+                                                    style={
+                                                        {
+                                                            ...commonSlideSx,
+                                                            border: 0,
+                                                            pointerEvents: controlsOn
+                                                                ? 'auto'
+                                                                : 'none',
+                                                        } as any
+                                                    }
+                                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                                    allowFullScreen
+                                                    loading="lazy"
+                                                    title={`${card.name} ${i + 1}`}
+                                                />
+                                            )}
+                                        </Box>
+                                    )
+                                })}
                             </Box>
                         </Box>
 
                         {/* Prev/Next */}
-                        {images.length > 1 && (
+                        {media.length > 1 && (
                             <>
                                 <IconButton
-                                    aria-label="Previous image"
+                                    aria-label="Previous media"
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         prev()
@@ -345,9 +443,8 @@ export default function CardTile({
                                 >
                                     <ChevronLeftIcon />
                                 </IconButton>
-
                                 <IconButton
-                                    aria-label="Next image"
+                                    aria-label="Next media"
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         next()
@@ -380,7 +477,7 @@ export default function CardTile({
                                         py: 0.5,
                                     }}
                                 >
-                                    {images.map((_, i) => (
+                                    {media.map((_, i) => (
                                         <Box
                                             key={i}
                                             onClick={(e) => {
@@ -402,7 +499,7 @@ export default function CardTile({
                         )}
                     </>
                 ) : (
-                    // No images: placeholder
+                    // No media: placeholder
                     <Box
                         onClick={() => onRequestEdit(card)}
                         sx={{
@@ -417,28 +514,32 @@ export default function CardTile({
                             '.MuiCard-root:hover &': { transform: 'scale(1.06)' },
                         }}
                     >
-                       {!disableActions ? (<AddPhotoAlternateIcon
-                            sx={{
-                                fontSize: '50px',
-                                opacity: 0.6,
-                                transition: 'opacity 200ms ease',
-                                '.MuiCard-root:hover &': { opacity: 1 },
-                            }}
-                        />) : (<NoPhotographyIcon
-                            sx={{
-                                fontSize: '50px',
-                                opacity: 0.6,
-                                transition: 'opacity 200ms ease',
-                                '.MuiCard-root:hover &': { opacity: 1 },
-                            }}
-                        />)} 
+                        {!disableActions ? (
+                            <AddPhotoAlternateIcon
+                                sx={{
+                                    fontSize: '50px',
+                                    opacity: 0.6,
+                                    transition: 'opacity 200ms ease',
+                                    '.MuiCard-root:hover &': { opacity: 1 },
+                                }}
+                            />
+                        ) : (
+                            <NoPhotographyIcon
+                                sx={{
+                                    fontSize: '50px',
+                                    opacity: 0.6,
+                                    transition: 'opacity 200ms ease',
+                                    '.MuiCard-root:hover &': { opacity: 1 },
+                                }}
+                            />
+                        )}
                     </Box>
                 )}
 
-                {/* Hover overlay: Zoom icon (only when we have images) */}
-                {hasImages && (
+                {/* Hover overlay: Zoom icon (only when we have media) */}
+                {hasMedia && (
                     <Tooltip
-                        title="Zoom Photo"
+                        title="Zoom Media"
                         placement="top"
                         slotProps={{
                             tooltip: {
@@ -453,7 +554,7 @@ export default function CardTile({
                         }}
                     >
                         <IconButton
-                            aria-label="Expand image"
+                            aria-label="Expand media"
                             onClick={() => {
                                 setImgOpen(true)
                                 showZoomHud()
@@ -480,7 +581,7 @@ export default function CardTile({
                 )}
 
                 {/* Edit/Delete hover actions */}
-                {disableActions || (
+                {disableActions ? null : (
                     <Box>
                         <Tooltip
                             title="Edit Card"
@@ -568,7 +669,13 @@ export default function CardTile({
             {/* CONTENT */}
             <Box
                 onClick={() => onRequestEdit(card)}
-                sx={{ mx: 1.5, my: 1, alignItems: 'stretch', cursor: disableActions ? '': 'pointer', height: '18%' }}
+                sx={{
+                    mx: 1.5,
+                    my: 1,
+                    alignItems: 'stretch',
+                    cursor: disableActions ? '' : 'pointer',
+                    height: '18%',
+                }}
             >
                 <Typography
                     gutterBottom
@@ -580,7 +687,6 @@ export default function CardTile({
                 >
                     {card.name}
                 </Typography>
-
                 {/* 2-line clamp */}
                 <Typography
                     variant="body2"
@@ -626,7 +732,9 @@ export default function CardTile({
                                         bgcolor: bg,
                                         color: contrast,
                                         textShadow: contrast === '#000' ? 'none' : TITLE_SHADOW,
-                                        '.MuiCard-root:hover &': { opacity: disableActions ? 1 : 0.5 },
+                                        '.MuiCard-root:hover &': {
+                                            opacity: disableActions ? 1 : 0.5,
+                                        },
                                         boxShadow:
                                             'rgba(0, 0, 0, 0.24) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;',
                                         border: 'solid 1px rgba(255, 255, 255, 0.4)',
@@ -646,57 +754,55 @@ export default function CardTile({
                             }}
                         />
                     )}
-
-                    {/* Always show "Edit" (pencil) */}
-                    {disableActions || (
-                        <Box>
-                            <Tooltip title="Edit categories" placement="top">
-                                <Button
-                                    size="small"
-                                    onClick={openPicker}
-                                    sx={{
-                                        border: 'solid 1px',
-                                        position: 'absolute',
-                                        left: '50%',
-                                        top: '50%',
-                                        height: '25px',
-                                        transform: 'translateX(-50%) translateY(-50%)',
-                                        bgcolor: theme.palette.customColors.white_blue,
-                                        color: theme.palette.customColors.grey_7,
-                                        opacity: 0,
-                                        transition:
-                                            'opacity 250ms ease, background-color 150ms ease',
-                                        '.MuiCard-root:hover &': { opacity: 1 },
-                                        '&:hover': {
-                                            bgcolor: theme.palette.customColors.grey_7,
-                                            color: theme.palette.customColors.white_blue,
-                                        },
-                                    }}
-                                >
-                                    <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>
-                                        Categories
-                                    </Typography>
-                                    <EditIcon sx={{ pl: 1 }} />
-                                </Button>
-                            </Tooltip>
-
-                            <CategoryPicker
-                                open={pickerOpen}
-                                anchorEl={pickerAnchor}
-                                onClose={closePicker}
-                                allCategories={allCategories}
-                                selectedIds={assignedIds}
-                                onApply={(ids) => onApplyCategories(card.id, ids)}
-                                maxSelection={maxCats}
-                                title="Edit categories"
-                            />
-                        </Box>
-                    )}
                 </Stack>
+
+                {/* Always show "Edit" (pencil) */}
+                {disableActions ? null : (
+                    <Box>
+                        <Tooltip title="Edit categories" placement="top">
+                            <Button
+                                size="small"
+                                onClick={openPicker}
+                                sx={{
+                                    border: 'solid 1px',
+                                    position: 'absolute',
+                                    left: '50%',
+                                    top: '50%',
+                                    height: '25px',
+                                    transform: 'translateX(-50%) translateY(-50%)',
+                                    bgcolor: theme.palette.customColors.white_blue,
+                                    color: theme.palette.customColors.grey_7,
+                                    opacity: 0,
+                                    transition: 'opacity 250ms ease, background-color 150ms ease',
+                                    '.MuiCard-root:hover &': { opacity: 1 },
+                                    '&:hover': {
+                                        bgcolor: theme.palette.customColors.grey_7,
+                                        color: theme.palette.customColors.white_blue,
+                                    },
+                                }}
+                            >
+                                <Typography sx={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                    Categories
+                                </Typography>
+                                <EditIcon sx={{ pl: 1 }} />
+                            </Button>
+                        </Tooltip>
+
+                        <CategoryPicker
+                            open={pickerOpen}
+                            anchorEl={pickerAnchor}
+                            onClose={closePicker}
+                            allCategories={allCategories}
+                            selectedIds={assignedIds}
+                            onApply={(ids) => onApplyCategories(card.id, ids)}
+                            maxSelection={maxCats}
+                            title="Edit categories"
+                        />
+                    </Box>
+                )}
             </Box>
 
-            {/* Full-screen carousel dialog (no hover zoom; wheel zoom instead) */}
-            {/* Full-screen carousel dialog (wheel zoom, aligned overlays) */}
+            {/* Full-screen carousel dialog (wheel zoom; works for img, video, and YouTube iframe) */}
             <Dialog
                 open={imgOpen}
                 onClose={() => setImgOpen(false)}
@@ -705,8 +811,8 @@ export default function CardTile({
                 slotProps={{
                     backdrop: {
                         sx: { backgroundColor: `rgba(0, 0, 0, ${DIALOG_BACKDROP_OPACITY})` },
-                    }, // opacity control
-                    paper: { sx: { bgcolor: 'transparent' } }, // transparent sheet
+                    },
+                    paper: { sx: { bgcolor: 'transparent' } },
                 }}
             >
                 <DialogContent
@@ -719,7 +825,7 @@ export default function CardTile({
                         alignItems: 'center',
                         justifyContent: 'center',
                         bgcolor: 'transparent',
-                        position: 'relative', // common positioning context for all overlays
+                        position: 'relative',
                         overscrollBehavior: 'contain',
                     }}
                     onMouseDown={onPointerDown as any}
@@ -727,9 +833,9 @@ export default function CardTile({
                     onTouchStart={onPointerDown as any}
                     onTouchEnd={onPointerUp as any}
                 >
-                    {hasImages && (
+                    {hasMedia && (
                         <>
-                            {/* Sliding track (images) */}
+                            {/* Sliding track */}
                             <Box
                                 sx={{
                                     width: '100%',
@@ -747,52 +853,84 @@ export default function CardTile({
                                         transform: `translateX(-${idx * 100}%)`,
                                     }}
                                 >
-                                    {images.map((src, i) => (
-                                        <Box
-                                            key={i}
-                                            data-active={i === idx ? 'true' : undefined}
-                                            sx={{
-                                                flex: '0 0 100%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                height: '100%',
-                                                overflow: 'hidden', // keep zoomed image within its slide
-                                            }}
-                                        >
+                                    {media.map((m, i) => {
+                                        const active = i === idx
+                                        const baseZoomableSx = {
+                                            display: 'block',
+                                            maxWidth: '95vw',
+                                            maxHeight: '90vh',
+                                            objectFit: 'contain' as const,
+                                            m: 'auto',
+                                            userSelect: 'none' as const,
+                                            transform: `scale(${active ? zoom : 1})`,
+                                            transformOrigin: `${origin.x}% ${origin.y}%`,
+                                            transition: active ? 'transform 120ms ease' : 'none',
+                                            // IMPORTANT: ensure wheel events reach DialogContent even when over the media
+                                            pointerEvents: 'none' as const,
+                                        }
+                                        return (
                                             <Box
-                                                component="img"
-                                                src={src}
-                                                alt={`${card.name} ${i + 1}`}
+                                                key={i}
+                                                data-active={active ? 'true' : undefined}
                                                 sx={{
-                                                    display: 'block',
-                                                    maxWidth: '95vw',
-                                                    maxHeight: '90vh',
-                                                    objectFit: 'contain',
-                                                    m: 'auto',
-                                                    userSelect: 'none',
-                                                    // No hover zoom here; only wheel zoom on the ACTIVE slide
-                                                    transform: `scale(${i === idx ? zoom : 1})`,
-                                                    transformOrigin: `${origin.x}% ${origin.y}%`,
-                                                    transition:
-                                                        i === idx ? 'transform 120ms ease' : 'none',
+                                                    flex: '0 0 100%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    height: '100%',
+                                                    overflow: 'hidden', // keep zoomed media within its slide
                                                 }}
-                                                draggable={false}
-                                            />
-                                        </Box>
-                                    ))}
+                                            >
+                                                {m.kind === 'image' && (
+                                                    <Box
+                                                        component="img"
+                                                        src={m.url}
+                                                        alt={`${card.name} ${i + 1}`}
+                                                        sx={baseZoomableSx}
+                                                        draggable={false}
+                                                    />
+                                                )}
+                                                {m.kind === 'video' && (
+                                                    <video
+                                                        src={m.url}
+                                                        style={baseZoomableSx as any}
+                                                        autoPlay
+                                                        muted
+                                                        loop
+                                                        playsInline
+                                                        controls={false}
+                                                        preload="auto"
+                                                    />
+                                                )}
+                                                {m.kind === 'youtube' && (
+                                                    <iframe
+                                                        src={
+                                                            toYouTubeEmbed(m.url, {
+                                                                autoplay: true,
+                                                                mute: false, // muted in zoom mode; user can unmute in control mode
+                                                                loop: true,
+                                                                controls: controlsOn ? 1 : 0, // ✅ show/hide UI
+                                                            }) ?? m.url
+                                                        }
+                                                        style={{
+                                                            ...(baseZoomableSx as any),
+                                                            border: 0,
+                                                            pointerEvents: 'auto',
+                                                        }}
+                                                        allow="autoplay; encrypted-media; picture-in-picture"
+                                                        allowFullScreen
+                                                        title={`${card.name} ${i + 1}`}
+                                                    />
+                                                )}
+                                            </Box>
+                                        )
+                                    })}
                                 </Box>
                             </Box>
 
-                            {/* Overlay layer: all controls centered relative to DialogContent */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    pointerEvents: 'none', // let underlying content receive events unless re-enabled per control
-                                }}
-                            >
-                                {/* Close button */}
+                            {/* Overlay layer */}
+                            <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                {/* Close */}
                                 <IconButton
                                     aria-label="Close"
                                     onClick={() => setImgOpen(false)}
@@ -809,12 +947,37 @@ export default function CardTile({
                                 >
                                     <CloseIcon />
                                 </IconButton>
-
+                                <Tooltip
+                                    title={controlsOn ? 'Zoom mode' : 'Enable player controls'}
+                                >
+                                    <IconButton
+                                        aria-label={
+                                            controlsOn
+                                                ? 'Back to zoom mode'
+                                                : 'Enable player controls'
+                                        }
+                                        onClick={() => setControlsOn((v) => !v)}
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            right: 64,
+                                            zIndex: 2,
+                                            bgcolor: controlsOn
+                                                ? 'rgba(235, 6, 18, 0.5)'
+                                                : 'rgba(6, 60, 235, 0.5)',
+                                            color: 'white',
+                                            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+                                            pointerEvents: 'auto',
+                                        }}
+                                    >
+                                        {controlsOn ? <SmartDisplayIcon /> : <ZoomInIcon />}
+                                    </IconButton>
+                                </Tooltip>
                                 {/* Prev / Next */}
-                                {images.length > 1 && (
+                                {media.length > 1 && (
                                     <>
                                         <IconButton
-                                            aria-label="Previous image"
+                                            aria-label="Previous media"
                                             onClick={prev}
                                             sx={{
                                                 position: 'absolute',
@@ -829,9 +992,8 @@ export default function CardTile({
                                         >
                                             <ChevronLeftIcon sx={{ fontSize: 36 }} />
                                         </IconButton>
-
                                         <IconButton
-                                            aria-label="Next image"
+                                            aria-label="Next media"
                                             onClick={next}
                                             sx={{
                                                 position: 'absolute',
@@ -863,7 +1025,7 @@ export default function CardTile({
                                                 pointerEvents: 'auto',
                                             }}
                                         >
-                                            {images.map((_, i) => (
+                                            {media.map((_, i) => (
                                                 <Box
                                                     key={i}
                                                     onClick={() => {
@@ -887,7 +1049,7 @@ export default function CardTile({
                                     </>
                                 )}
 
-                                {/* Zoom HUD Chip (centered under image; sits above dots if present) */}
+                                {/* Zoom HUD */}
                                 <Chip
                                     size="small"
                                     label={`${Math.round(zoom * 100)}%`}
@@ -896,7 +1058,7 @@ export default function CardTile({
                                         position: 'absolute',
                                         left: '50%',
                                         transform: 'translateX(-50%)',
-                                        bottom: images.length > 1 ? 56 : 16, // if dots exist, lift Chip above them
+                                        bottom: media.length > 1 ? 56 : 16,
                                         zIndex: 3,
                                         bgcolor: 'rgba(0, 0, 0, 0.6)',
                                         color: '#fff',

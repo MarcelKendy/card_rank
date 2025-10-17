@@ -18,6 +18,7 @@ import {
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import CloseIcon from '@mui/icons-material/Close'
+import NoPhotographyIcon from '@mui/icons-material/NoPhotography'
 import type { CategoryPickerProps } from './types'
 
 export default function CategoryPicker({
@@ -32,7 +33,7 @@ export default function CategoryPicker({
 }: CategoryPickerProps) {
     const [query, setQuery] = React.useState('')
     const [working, setWorking] = React.useState<number[]>(selectedIds)
-    const [saving, setSaving] = React.useState(false) // ⬅️ NEW: global loading for this picker
+    const [saving, setSaving] = React.useState(false) // global loading for this picker
 
     // Keep local state in sync whenever the Popper opens (or selection changes externally)
     React.useEffect(() => {
@@ -40,7 +41,7 @@ export default function CategoryPicker({
             setQuery('')
             setWorking(selectedIds)
         }
-    }, [open])
+    }, [open, selectedIds])
 
     const filtered = React.useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -52,10 +53,8 @@ export default function CategoryPicker({
     // Toggle & APPLY IMMEDIATELY with loading + rollback on failure
     const toggle = async (id: number) => {
         if (saving) return
-
         const already = working.includes(id)
         let next = working
-
         if (already) {
             next = working.filter((x) => x !== id)
         } else if (working.length < maxSelection) {
@@ -66,9 +65,7 @@ export default function CategoryPicker({
         setSaving(true)
         const prev = working
         setWorking(next)
-        
         try {
-            // 👇 This line fixes the 'void' issue and awaits async handlers
             await Promise.resolve(onApply(next))
         } catch (err) {
             console.error('Failed to apply categories', err)
@@ -84,7 +81,7 @@ export default function CategoryPicker({
             ? `${selectedCount}/${maxSelection} selected`
             : `${selectedCount} selected`
 
-    // While saving, disable interactions entirely (but keep search enabled if you want)
+    // While saving, disable interactions entirely (but keep search disabled for clarity)
     const allDisabled = saving
 
     return (
@@ -126,17 +123,14 @@ export default function CategoryPicker({
                             gap={1}
                         >
                             <IconButton color="error" onClick={onClose} disabled={saving}>
-                                {/* move onClick to IconButton so the button properly disables */}
                                 <CloseIcon />
                             </IconButton>
-
                             <Stack direction="row" alignItems="center" gap={1}>
                                 <Typography variant="subtitle2" fontWeight={700}>
                                     {title}
                                 </Typography>
                                 {saving && <CircularProgress size={16} thickness={6} />}
                             </Stack>
-
                             <Typography variant="caption" color="text.secondary">
                                 {limitNote}
                             </Typography>
@@ -148,7 +142,7 @@ export default function CategoryPicker({
                             placeholder="Search categories…"
                             size="small"
                             fullWidth
-                            disabled={saving /* optional: keep search editable if you prefer */}
+                            disabled={saving}
                             sx={{ mt: 1 }}
                             slotProps={{
                                 input: {
@@ -168,7 +162,7 @@ export default function CategoryPicker({
                             {filtered.map((cat) => {
                                 const checked = working.includes(cat.id)
                                 const exceeded = !checked && !canToggle(cat.id)
-                                const disabled = allDisabled || exceeded // ⬅️ disable while saving
+                                const disabled = allDisabled || exceeded
 
                                 return (
                                     <ListItemButton
@@ -179,38 +173,60 @@ export default function CategoryPicker({
                                             borderRadius: 1,
                                             mb: 0.5,
                                             opacity: disabled && !checked ? 0.7 : 1,
+                                            alignItems: 'center',
                                         }}
                                     >
+                                        {/* Checkbox */}
                                         <Checkbox
                                             edge="start"
                                             tabIndex={-1}
                                             disableRipple
                                             checked={checked}
-                                            disabled={disabled} // ⬅️ disable the checkbox too
+                                            disabled={disabled}
                                             sx={{ mr: 1 }}
                                         />
+
+                                        {/* Category name in its color */}
                                         <ListItemText
                                             primary={cat.name}
                                             slotProps={{
-                                                primary: { noWrap: true },
+                                                primary: {
+                                                    noWrap: true,
+                                                    sx: { color: cat.color, fontWeight: 700 },
+                                                },
                                             }}
+                                            // Optional: keep the hex code as a subtle secondary line (can remove if you prefer)
                                             secondary={
                                                 cat.color
                                                     ? `#${cat.color.replace('#', '')}`
                                                     : undefined
                                             }
                                         />
-                                        {cat.color && (
+                                        {/* NEW: Media thumbnail OR fallback icon, with 1px border in cat.color */}
+                                        {cat.image_url ? (
                                             <Box
-                                                sx={(t) => ({
-                                                    width: 16,
-                                                    height: 16,
-                                                    borderRadius: '50%',
-                                                    ml: 1,
-                                                    border: `1px solid ${t.palette.divider}`,
-                                                    bgcolor: cat.color,
-                                                    opacity: disabled ? 0.8 : 1,
-                                                })}
+                                                component="img"
+                                                src={cat.image_url}
+                                                alt=""
+                                                sx={{
+                                                    width: 48,
+                                                    height: 48,
+                                                    objectFit: 'cover',
+                                                    borderRadius: 0.75,
+                                                    border: `1px solid ${cat.color}`,
+                                                    mr: 1,
+                                                    display: 'block',
+                                                }}
+                                            />
+                                        ) : (
+                                            <NoPhotographyIcon  
+                                                fontSize="medium"
+                                                sx={{
+                                                    color: cat.color,
+                                                    mr: 1,
+                                                    opacity: disabled ? 0.9 : 1,
+                                                    width: 48,
+                                                }}
                                             />
                                         )}
                                     </ListItemButton>
@@ -224,7 +240,6 @@ export default function CategoryPicker({
                             )}
                         </List>
                     </Box>
-
                     {/* No footer: changes apply immediately; click-away closes the popper */}
                 </Paper>
             </ClickAwayListener>

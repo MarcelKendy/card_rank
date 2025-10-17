@@ -4,7 +4,7 @@ export type Category = {
     id: number
     name: string
     color?: string
-    icon?: string
+    image_url?: string | null
 }
 
 export type CardModel = {
@@ -13,7 +13,7 @@ export type CardModel = {
     description: string
     rating: number | 0
     image_url?: string | null // fixed typing
-    categories: Category[] 
+    categories: Category[]
 }
 
 export type CategoryPickerProps = {

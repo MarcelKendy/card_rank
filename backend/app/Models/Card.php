@@ -25,4 +25,9 @@ class Card extends Model
     {
         return $this->belongsToMany(Ranking::class, 'ranking_cards')->withPivot('placement', 'tier')->withTimestamps();
     }
+
+    public function rankingCards()
+    {
+        return $this->hasMany(RankingCard::class, 'card_id');
+    }
 }

@@ -68,7 +68,6 @@ export default function TierBoard({
     const [search, setSearch] = React.useState('')
 
     // DnD insertion preview
-    const [draggingId, setDraggingId] = React.useState<number | null>(null)
     const [dragOverTier, setDragOverTier] = React.useState<string | null>(null)
     const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null)
 
@@ -97,7 +96,6 @@ export default function TierBoard({
     }, [tiersMap, tierNames])
 
     const deleteTier = async (idx: number) => {
-        const nameToDelete = tierNames[idx]
         const newNames = tierNames.filter((_, i) => i !== idx)
         const nextMap: Record<string, number[]> = {}
         newNames.forEach((n) => {
@@ -143,7 +141,6 @@ export default function TierBoard({
     const onDragStartCard = (e: React.DragEvent<HTMLElement>, cardId: number) => {
         e.dataTransfer.setData('application/x-card', String(cardId))
         e.dataTransfer.effectAllowed = 'move'
-        setDraggingId(cardId)
     }
 
     const allowDrop = (e: React.DragEvent) => e.preventDefault()
@@ -151,7 +148,6 @@ export default function TierBoard({
     const clearDragPreview = () => {
         setDragOverTier(null)
         setDragOverIndex(null)
-        setDraggingId(null)
     }
 
     const persist = React.useCallback(

@@ -14,9 +14,7 @@ import {
     Popper,
     ClickAwayListener,
     ButtonGroup,
-    Rating,
-    Select,
-    MenuItem,
+    Rating
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import FilterAltIcon from '@mui/icons-material/FilterAlt'
@@ -31,8 +29,7 @@ import {
     serializeTiers,
     validateNameValue,
     validateDescriptionValue,
-    validateTiersValue,
-    TIER_NAME_MAX,
+    validateTiersValue
 } from './utils'
 
 type Props = {

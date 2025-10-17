@@ -14,11 +14,16 @@ class Ranking extends Model
         'description',
         'image_url',
         'tiers',
-        'filters',        
+        'filters',
     ];
 
     public function cards()
     {
-        return $this->belongsToMany(Card::class, 'ranking_cards')->withPivot('placement','tier')->withTimestamps();
+        return $this->belongsToMany(Card::class, 'ranking_cards')->withPivot('placement', 'tier')->withTimestamps();
+    }
+
+    public function rankingCards()
+    {
+        return $this->hasMany(RankingCard::class, 'ranking_id');
     }
 }

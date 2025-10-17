@@ -19,36 +19,22 @@ import {
     Collapse,
     Skeleton,
     InputAdornment,
-    TextField, // ⬅️ added
+    TextField,
+    Tooltip,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CloseIcon from '@mui/icons-material/Close'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
-import * as MuiIcons from '@mui/icons-material'
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import { useTheme } from '@mui/material/styles'
 import { TransitionGroup } from 'react-transition-group'
 import api from '../../services/api'
 import type { Category } from './types'
 import type { AlertColor } from '@mui/material/Alert'
 
-/* ----------------------------- Icon utilities ----------------------------- */
-
-// Keep base icon variant only (e.g., "HomeOutlined" -> "Home")
-const VARIANT_SUFFIX_RE = /(Outlined|Rounded|TwoTone|Sharp)$/
-function toBaseIconName(name: string) {
-    return name.replace(VARIANT_SUFFIX_RE, '')
-}
-function resolveIcon(name?: string) {
-    const Fallback = (MuiIcons as any)['Category'] as React.ElementType
-    if (!name) return Fallback
-    const Comp = (MuiIcons as any)[toBaseIconName(name)]
-    return (Comp ?? Fallback) as React.ElementType
-}
-
-/* --------------------------- Color contrast helper ------------------------ */
-
+/* ----------------------------- Color contrast helper ----------------------------- */
 function getReadableTextColor(hex: string): string {
     const v = (hex ?? '').trim().toLowerCase()
     const m = /^#([0-9a-f]{6})$/.exec(v)
@@ -56,13 +42,11 @@ function getReadableTextColor(hex: string): string {
     const r = parseInt(m[1].slice(0, 2), 16)
     const g = parseInt(m[1].slice(2, 4), 16)
     const b = parseInt(m[1].slice(4, 6), 16)
-    // Perceived luminance
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     return luminance > 0.6 ? '#000' : '#fff'
 }
 
-/* ---------------------------------- Types --------------------------------- */
-
+/* ------------------------------------ Types ------------------------------------ */
 interface Props {
     categories: Category[]
     loading_fetch: boolean
@@ -71,8 +55,7 @@ interface Props {
     onRemove: (id: number) => void // ← update local array in parent after delete
 }
 
-/* -------------------------- Skeleton list item UI ------------------------- */
-
+/* ------------------------------ Skeleton list item ------------------------------ */
 function CategorySkeletonItem() {
     return (
         <ListItem
@@ -96,16 +79,14 @@ function CategorySkeletonItem() {
                     minWidth: 0,
                 }}
             >
-                {/* Leading icon placeholder */}
+                {/* Leading placeholder */}
                 <ListItemIcon sx={{ minWidth: 36 }}>
                     <Skeleton variant="circular" width={24} height={24} animation="wave" />
                 </ListItemIcon>
 
                 {/* Text area placeholders */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    {/* primary */}
                     <Skeleton variant="text" width="40%" height={24} animation="wave" />
-                    {/* secondary */}
                     <Skeleton
                         variant="text"
                         width="28%"
@@ -126,7 +107,7 @@ function CategorySkeletonItem() {
                     />
                 </Box>
 
-                {/* Trailing actions placeholders */}
+                {/* Actions */}
                 <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                     <IconButton edge="end" disabled sx={{ mr: 0.5 }}>
                         <Skeleton variant="circular" width={36} height={36} animation="wave" />
@@ -139,11 +120,9 @@ function CategorySkeletonItem() {
         </ListItem>
     )
 }
-
 const SKELETON_ROWS = 6
 
-/* ------------------------------ Main component ---------------------------- */
-
+/* ---------------------------------- Component ---------------------------------- */
 export default function CategoryList({
     categories,
     loading_fetch,
@@ -152,25 +131,21 @@ export default function CategoryList({
     onRemove,
 }: Props) {
     const theme = useTheme()
-
     // Search (by name only)
     const [search, setSearch] = useState('')
-
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase()
         if (!q) return categories
         return categories.filter((c) => c.name?.toLowerCase().includes(q))
     }, [categories, search])
 
-    // Delete dialog state
+    // Delete dialog
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [target, setTarget] = useState<Category | null>(null)
-
     const askDelete = (cat: Category) => {
         setTarget(cat)
         setConfirmOpen(true)
     }
-
     const handleConfirmDelete = async () => {
         if (!target) return
         try {
@@ -190,12 +165,12 @@ export default function CategoryList({
             <Card
                 variant="outlined"
                 sx={{
-                    overflow: 'visible', // let item shadows extend outside
+                    overflow: 'visible',
                     px: 2,
-                    backgroundColor: 'rgb(50, 50, 50)',
+                    bgcolor: theme.palette.customColors?.grey_6,
                 }}
             >
-                {/* Top row: Search (left) + Chip (right absolute) */}
+                {/* Top row: Search + stats chip */}
                 <Box sx={{ p: 1.5, position: 'relative' }}>
                     <TextField
                         value={search}
@@ -226,7 +201,6 @@ export default function CategoryList({
                             },
                         }}
                         sx={{
-                            // keep text visible on dark background and keep borders subtle
                             '& .MuiOutlinedInput-root': {
                                 color: 'common.white',
                                 backgroundColor: 'transparent',
@@ -235,10 +209,8 @@ export default function CategoryList({
                                 '&.Mui-focused fieldset': { borderColor: 'primary.main' },
                                 width: { xs: 140, sm: 360 },
                             },
-                            // ensure input text doesn't go underneath the absolute Chip
                         }}
                     />
-
                     <Chip
                         size="small"
                         label={
@@ -248,7 +220,6 @@ export default function CategoryList({
                         }
                         color="default"
                         variant="outlined"
-                        // Absolute on the right, vertically centered to the TextField
                         sx={{
                             position: 'absolute',
                             right: 12,
@@ -266,7 +237,7 @@ export default function CategoryList({
 
                 <Divider />
 
-                {/* Use CardContent to control internal padding precisely */}
+                {/* List */}
                 <CardContent sx={{ p: 0 }}>
                     <List
                         component="div"
@@ -274,15 +245,12 @@ export default function CategoryList({
                         sx={{
                             py: 1,
                             overflow: 'visible',
-                            // Make it a 2-column grid (responsive: 1 col on xs, 2 cols from sm up)
                             display: 'grid',
                             gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
-                            gap: 2, // theme spacing between items
-                            // Ensure children can shrink for text ellipsis
+                            gap: 2,
                             '& > *': { minWidth: 0 },
                         }}
                     >
-                        {/* TransitionGroup animates additions/removals */}
                         <TransitionGroup component={null}>
                             {loading_fetch
                                 ? Array.from({ length: SKELETON_ROWS }).map((_, i) => (
@@ -291,21 +259,19 @@ export default function CategoryList({
                                       </Collapse>
                                   ))
                                 : filtered.map((cat) => {
-                                      const Icon = resolveIcon(cat.icon)
                                       const chipTextColor = getReadableTextColor(cat.color)
 
                                       return (
                                           <Collapse key={cat.id} timeout={300} unmountOnExit>
-                                              {/* Custom flex layout to avoid secondaryAction overlay issues */}
                                               <ListItem
                                                   disableGutters
                                                   sx={{
-                                                      px: 2, // internal horizontal padding
-                                                      py: 1, // internal vertical padding
+                                                      px: 2,
+                                                      py: 1,
                                                       borderRadius: 1.5,
-                                                      bgcolor: theme.palette.customColors.grey_6,
+                                                      bgcolor: 'rgba(104, 105, 105, 0.25)',
                                                       border: `1px solid ${theme.palette.divider}`,
-                                                      boxShadow: 2,
+                                                      boxShadow: 4,
                                                       cursor: 'pointer',
                                                       transition: (t) =>
                                                           t.transitions.create(
@@ -329,14 +295,35 @@ export default function CategoryList({
                                                           alignItems: 'center',
                                                           gap: 1,
                                                           width: '100%',
-                                                          minWidth: 0, // allow text to ellipsize
+                                                          minWidth: 0,
                                                       }}
                                                   >
-                                                      {/* Leading icon (tinted by category color) */}
-                                                      <ListItemIcon
-                                                          sx={{ minWidth: 36, color: cat.color }}
-                                                      >
-                                                          <Icon />
+                                                      {/* Leading media: image with 1px colored border OR fallback icon */}
+                                                      <ListItemIcon sx={{ minWidth: 48 }}>
+                                                          {cat.image_url ? (
+                                                              <Box
+                                                                  component="img"
+                                                                  src={cat.image_url}
+                                                                  alt=""
+                                                                  sx={{
+                                                                      width: 48,
+                                                                      height: 48,
+                                                                      borderRadius: '3px',
+                                                                      objectFit: 'cover',
+                                                                      border: `1px solid ${cat.color}`,
+                                                                      display: 'block',
+                                                                  }}
+                                                              />
+                                                          ) : (
+                                                              <AddPhotoAlternateIcon
+                                                                  sx={{
+                                                                      color: cat.color,
+                                                                      width: 36,
+                                                                      height: 36,
+                                                                  }}
+                                                                  fontSize="small"
+                                                              />
+                                                          )}
                                                       </ListItemIcon>
 
                                                       {/* Text area */}
@@ -345,9 +332,9 @@ export default function CategoryList({
                                                               primary={cat.name}
                                                               title={cat.name}
                                                               secondary={
-                                                                  cat.icon
-                                                                      ? `Icon: ${toBaseIconName(cat.icon)}`
-                                                                      : undefined
+                                                                  cat.image_url
+                                                                      ? undefined
+                                                                      : 'No image'
                                                               }
                                                               slotProps={{
                                                                   primary: {
@@ -362,7 +349,7 @@ export default function CategoryList({
                                                           />
                                                       </Box>
 
-                                                      {/* Color chip (never overlaps actions) */}
+                                                      {/* Color chip */}
                                                       <Chip
                                                           size="small"
                                                           label={cat.color}
@@ -374,7 +361,7 @@ export default function CategoryList({
                                                           }}
                                                       />
 
-                                                      {/* Trailing actions (aligned to the right) */}
+                                                      {/* Actions */}
                                                       <Box
                                                           sx={{
                                                               display: 'flex',
@@ -382,27 +369,85 @@ export default function CategoryList({
                                                               flexShrink: 0,
                                                           }}
                                                       >
-                                                          <IconButton
-                                                              edge="end"
-                                                              onClick={() => onEdit(cat)}
-                                                              aria-label="edit"
-                                                              sx={{
-                                                                  color: theme.palette.warning.main,
-                                                                  mr: 0.5,
+                                                          <Tooltip
+                                                              title="Edit"
+                                                              placement="top"
+                                                              slotProps={{
+                                                                  tooltip: {
+                                                                      sx: (t) => ({
+                                                                          bgcolor:
+                                                                              t.palette.warning
+                                                                                  .main,
+                                                                          color: t.palette.getContrastText(
+                                                                              t.palette.warning.main
+                                                                          ),
+                                                                          boxShadow: t.shadows[3],
+                                                                          fontWeight: 700,
+                                                                      }),
+                                                                  },
+                                                                  arrow: {
+                                                                      sx: (t) => ({
+                                                                          color: t.palette.warning
+                                                                              .main,
+                                                                      }),
+                                                                  },
                                                               }}
                                                           >
-                                                              <EditIcon />
-                                                          </IconButton>
-                                                          <IconButton
-                                                              edge="end"
-                                                              onClick={() => askDelete(cat)}
-                                                              aria-label="delete"
-                                                              sx={{
-                                                                  color: theme.palette.error.main,
+                                                              <IconButton
+                                                                  edge="end"
+                                                                  onClick={(e) => {
+                                                                      e.stopPropagation()
+                                                                      onEdit(cat)
+                                                                  }}
+                                                                  aria-label="edit"
+                                                                  sx={{
+                                                                      color: theme.palette.warning
+                                                                          .main,
+                                                                      mr: 0.5,
+                                                                  }}
+                                                              >
+                                                                  <EditIcon />
+                                                              </IconButton>
+                                                          </Tooltip>
+
+                                                          <Tooltip
+                                                              title="Delete"
+                                                              placement="top"
+                                                              slotProps={{
+                                                                  tooltip: {
+                                                                      sx: (t) => ({
+                                                                          bgcolor:
+                                                                              t.palette.error.main,
+                                                                          color: t.palette.getContrastText(
+                                                                              t.palette.error.main
+                                                                          ),
+                                                                          boxShadow: t.shadows[3],
+                                                                          fontWeight: 700,
+                                                                      }),
+                                                                  },
+                                                                  arrow: {
+                                                                      sx: (t) => ({
+                                                                          color: t.palette.error
+                                                                              .main,
+                                                                      }),
+                                                                  },
                                                               }}
                                                           >
-                                                              <DeleteIcon />
-                                                          </IconButton>
+                                                              <IconButton
+                                                                  edge="end"
+                                                                  onClick={(e) => {
+                                                                      e.stopPropagation()
+                                                                      askDelete(cat)
+                                                                  }}
+                                                                  aria-label="delete"
+                                                                  sx={{
+                                                                      color: theme.palette.error
+                                                                          .main,
+                                                                  }}
+                                                              >
+                                                                  <DeleteIcon />
+                                                              </IconButton>
+                                                          </Tooltip>
                                                       </Box>
                                                   </Box>
                                               </ListItem>
@@ -414,7 +459,7 @@ export default function CategoryList({
                 </CardContent>
             </Card>
 
-            {/* Delete confirmation dialog */}
+            {/* Delete confirmation */}
             <Dialog
                 open={confirmOpen}
                 onClose={() => setConfirmOpen(false)}

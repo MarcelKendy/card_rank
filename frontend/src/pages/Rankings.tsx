@@ -448,7 +448,7 @@ export default function RankingsPage() {
     return (
         <Box>
             {/* Toolbar */}
-            <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: theme.palette.customColors.grey_6 }}>
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={2}

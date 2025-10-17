@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { Box, Container, Stack, Typography, IconButton, Tooltip } from '@mui/material'
 import InstagramIcon from '@mui/icons-material/Instagram'
 import YouTubeIcon from '@mui/icons-material/YouTube'
@@ -20,6 +19,8 @@ export default function PageFooter() {
             component="footer"
             role="contentinfo"
             sx={(theme) => ({
+                mt: 'auto',
+                py: 0,
                 borderTop: `1px solid ${theme.palette.divider}`,
                 bgcolor:
                     theme.palette.mode === 'dark'
@@ -33,16 +34,31 @@ export default function PageFooter() {
                     alignItems="center"
                     justifyContent="space-between"
                     spacing={{ xs: 2, sm: 4 }}
-                    sx={{ py: 3 }}
+                    sx={{ py: 0 }}
                 >
                     {/* Left: location + year */}
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ textAlign: { xs: 'center', sm: 'left' } }}
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        alignItems="center"
+                        justifyContent="space-between"
+                        spacing={{ xs: 2, sm: 4 }}
                     >
-                        © {year} Card Rank • São Gotardo - MG
-                    </Typography>
+                        <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} width="150px"></Box>
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                                textAlign: {
+                                    xs: 'center',
+                                    sm: 'left',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                },
+                            }}
+                        >
+                            © {year} Card Rankings • São Gotardo - MG
+                        </Typography>
+                    </Stack>
 
                     {/* Right: social icons */}
                     <Stack direction="row" spacing={2}>

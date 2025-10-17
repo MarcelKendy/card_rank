@@ -1,6 +1,6 @@
-export interface Category {
+export type Category = {
     id: number
     name: string
     color: string
-    icon: string
+    image_url?: string | null
 }

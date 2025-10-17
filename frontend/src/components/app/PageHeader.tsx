@@ -1,14 +1,14 @@
 import React from 'react'
 import { Box, Typography, Breadcrumbs, Link, Container } from '@mui/material'
 import HomeIcon from '@mui/icons-material/Home'
-import CreditCardIcon from '@mui/icons-material/CreditCard'
+import ViewModuleIcon from "@mui/icons-material/ViewModule"; 
 import CategoryIcon from '@mui/icons-material/Category'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import { useLocation, Link as RouterLink } from 'react-router-dom'
 
 // Keep config with literal keys for strict typing + autocomplete
 const pageConfig = {
-    '/cards': { label: 'Cards', icon: <CreditCardIcon fontSize="large" /> },
+    '/cards': { label: 'Cards', icon: <ViewModuleIcon fontSize="large" /> },
     '/categories': { label: 'Categories', icon: <CategoryIcon fontSize="large" /> },
     '/rankings': { label: 'Rankings', icon: <EmojiEventsIcon fontSize="large" /> },
 } as const

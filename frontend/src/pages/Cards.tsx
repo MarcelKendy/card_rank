@@ -222,7 +222,7 @@ function AddTile({ onClick, disabled }: { onClick: () => void; disabled: boolean
                 <Stack
                     alignItems="center"
                     spacing={1}
-                    sx={(t) => ({
+                    sx={() => ({
                         transition: (t) =>
                             t.transitions.create(['transform'], {
                                 duration: t.transitions.duration.shorter,
@@ -441,8 +441,6 @@ export default function CardsPage() {
             notify(err?.response?.data?.message ?? 'Failed to update card categories', 'error')
         }
     }
-
-    const askDelete = (card: CardModel) => setDeleteAsk(card)
 
     const confirmDelete = async () => {
         if (!deleteAsk) return

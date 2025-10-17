@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\RankingController;
 
 /*
@@ -40,3 +41,6 @@ Route::post('/add_ranking', [RankingController::class, 'addRanking']);
 Route::put('/edit_ranking/{ranking}', [RankingController::class, 'editRanking']);
 Route::delete('/delete_ranking/{ranking}', [RankingController::class, 'deleteRanking']);
 Route::post('/sync_ranking_cards/{ranking}', [RankingController::class, 'syncRankingCards']);
+
+// Home Routes
+Route::get('/get_best_ranked_cards', [HomeController::class, 'getBestRankedCards']);

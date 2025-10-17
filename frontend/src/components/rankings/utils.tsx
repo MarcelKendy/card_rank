@@ -207,3 +207,45 @@ export function remapForNewTierNames(
     }
     return next
 }
+
+/** Split a multi-image string into clean URLs.
+ *  Supports '||', real newlines (LF/CRLF), and legacy '\\n\\n'.
+ *  Also tolerates a JSON array string of URLs.
+ */
+export function splitImagesFlexible(value?: string | null): string[] {
+    if (!value) return []
+
+    const raw = String(value).trim()
+
+    // Case 1: JSON array of URLs
+    if (raw.startsWith('[') && raw.endsWith(']')) {
+        try {
+            const arr = JSON.parse(raw)
+            if (Array.isArray(arr)) {
+                return arr
+                    .map(String)
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+            }
+        } catch {
+            // fall through to regex split
+        }
+    }
+
+    // Case 2: Delimiters: '||', escaped \n\n, or real \n / \r\n
+    // - one or more occurrences of any of the delimiters
+    const parts = raw
+        .replace(/\r\n/g, '\n')
+        .split(/(?:\s*\|\|\s*|\\n\\n|\n)+/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+    // Optional: final cleanup — strip surrounding quotes
+    return parts.map((s) => s.replace(/^"(.*)"$/, '$1'))
+}
+
+/** First image URL or empty string. */
+export function firstImage(value?: string | null): string {
+    const imgs = splitImagesFlexible(value)
+    return imgs.length ? imgs[0] : ''
+}

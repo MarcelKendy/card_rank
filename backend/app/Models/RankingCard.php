@@ -14,4 +14,14 @@ class RankingCard extends Model
         'card_id',
         'placement'
     ];
+
+    public function card()
+    {
+        return $this->belongsTo(Card::class);
+    }
+
+    public function ranking()
+    {
+        return $this->belongsTo(Ranking::class);
+    }
 }

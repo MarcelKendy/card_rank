@@ -17,7 +17,8 @@ import {
     ListSubheader,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import CreditCardIcon from '@mui/icons-material/CreditCard'
+import HomeIcon from '@mui/icons-material/Home'
+import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import CategoryIcon from '@mui/icons-material/Category'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import PageHeader from './components/app/PageHeader.tsx'
@@ -25,6 +26,7 @@ import PageFooter from './components/app/PageFooter.tsx'
 import Categories from './pages/Categories.tsx'
 import Cards from './pages/Cards.tsx'
 import Rankings from './pages/Rankings.tsx'
+import Home from './pages/Home.tsx'
 import theme from './theme'
 
 const drawerWidth = 280 // a bit wider to breathe with icons
@@ -34,9 +36,21 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
 
     const navItems = [
         {
+            label: 'Home',
+            to: '/',
+            icon: <HomeIcon />,
+            isActive: (p: string) => p == '/',
+        },
+        {
+            label: 'Rankings',
+            to: '/rankings',
+            icon: <EmojiEventsIcon />,
+            isActive: (p: string) => p.startsWith('/rankings'),
+        },
+        {
             label: 'Cards',
             to: '/cards',
-            icon: <CreditCardIcon />,
+            icon: <ViewModuleIcon />,
             isActive: (p: string) => p.startsWith('/cards'),
         },
         {
@@ -44,12 +58,6 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
             to: '/categories',
             icon: <CategoryIcon />,
             isActive: (p: string) => p.startsWith('/categories'),
-        },
-        {
-            label: 'Rankings',
-            to: '/rankings',
-            icon: <EmojiEventsIcon />,
-            isActive: (p: string) => p.startsWith('/rankings'),
         },
     ]
 
@@ -59,15 +67,16 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
                 <ListSubheader
                     component="div"
                     sx={{
+                        mb: 2,
                         lineHeight: 2.5,
                         color: (t) => t.palette.customColors.teal_2, // ✅ subheader color
                         fontWeight: 600,
                         letterSpacing: 0.4,
                         textTransform: 'uppercase',
-                        bgcolor: 'transparent',
+                        bgcolor: theme.palette.customColors.grey_6,
                     }}
                 >
-                    Navigation
+                    Pages
                 </ListSubheader>
             }
             sx={{
@@ -159,7 +168,7 @@ export default function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <Router>
-                <Box sx={{ display: 'flex' }}>
+                <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                     {/* Top AppBar */}
                     <AppBar
                         position="fixed"
@@ -176,7 +185,7 @@ export default function App() {
                                 pointerEvents: 'none',
                                 // same gradient as yours, but using rgba for clarity
                                 backgroundImage:
-                                    'linear-gradient(to right, rgba(0,102,97,1), rgba(3,162,190,0.65))',
+                                    'linear-gradient(to right, rgba(22, 22, 22, 0.68), rgba(7, 197, 204, 0.59))',
                                 opacity: bgOpacity, // 👈 fades with scroll
                                 transition: 'opacity 160ms ease',
                             },
@@ -197,8 +206,9 @@ export default function App() {
                             >
                                 <MenuIcon />
                             </IconButton>
-                            <Typography variant="h6" noWrap component="div">
-                                Card Rank
+                            <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} width="64px"></Box>
+                            <Typography variant="h6" noWrap component="div" fontFamily="">
+                                Card Rankings
                             </Typography>
                         </Toolbar>
                     </AppBar>
@@ -214,7 +224,7 @@ export default function App() {
                             '& .MuiDrawer-paper': {
                                 width: drawerWidth,
                                 boxSizing: 'border-box',
-                                backgroundColor: (t) => t.palette.customColors.grey_6,
+                                backgroundColor: 'rgba(0, 0, 0, 0.83)',
                             },
                         }}
                     >
@@ -244,13 +254,13 @@ export default function App() {
                         <Box>
                             <Box sx={{ my: 4, mx: 12 }}>
                                 <Routes>
-                                    <Route path="/categories" element={<Categories />} />
-                                    <Route path="/cards" element={<Cards />} />
+                                    <Route path="/" element={<Home />} />
                                     <Route path="/rankings" element={<Rankings />} />
+                                    <Route path="/cards" element={<Cards />} />
+                                    <Route path="/categories" element={<Categories />} />
                                 </Routes>
                             </Box>
                         </Box>
-
                         <PageFooter />
                     </Box>
                 </Box>

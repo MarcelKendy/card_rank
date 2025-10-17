@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-    Container,
     Card,
     CardContent,
     Stack,
@@ -8,59 +7,21 @@ import {
     Button,
     Snackbar,
     Alert,
-    Autocomplete,
     InputAdornment,
-    Box,
+    Box
 } from '@mui/material'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import EditIcon from '@mui/icons-material/Edit'
-import * as MuiIcons from '@mui/icons-material' // ⚠️ Imports all icons; consider curating or code-splitting in production.
-import { createFilterOptions } from '@mui/material/Autocomplete'
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import api from '../services/api.ts'
 import CategoryList from '../components/categories/CategoryList.tsx'
 import type { AlertColor } from '@mui/material/Alert'
 import type { Category } from '../components/categories/types'
-
-/* =========================
- * Icon helpers (base variants only)
- * ========================= */
-const VARIANT_SUFFIX_RE = /(Outlined|Rounded|TwoTone|Sharp)$/
-const EXCLUDE_EXPORTS = new Set(['SvgIcon', 'createSvgIcon', 'getSvgIconUtilityClass', 'default'])
-
-function isIconExport(name: string) {
-    return /^[A-Z]/.test(name) && !EXCLUDE_EXPORTS.has(name)
-}
-
-// Convert variant name to base name: "BoltOutlined" -> "Bolt"
-function toBaseIconName(name: string) {
-    return name.replace(VARIANT_SUFFIX_RE, '')
-}
-
-// Build a unique, sorted list of base icon names only
-function getBaseIconNames(): string[] {
-    const all = Object.keys(MuiIcons).filter(isIconExport)
-    const baseSet = new Set<string>()
-    for (const k of all) {
-        const base = toBaseIconName(k)
-        if ((MuiIcons as any)[base]) baseSet.add(base)
-    }
-    return Array.from(baseSet).sort()
-}
-
-// Resolve the icon component by base name with a safe fallback
-function resolveIcon(name?: string) {
-    const Fallback = (MuiIcons as any)['Category'] as React.ElementType
-    if (!name) return Fallback
-    const Comp = (MuiIcons as any)[toBaseIconName(name)]
-    return (Comp ?? Fallback) as React.ElementType
-}
+import theme from '../theme.ts'
 
 /* =========================
  * Color normalization & validation
  * ========================= */
-
-// Expand 3-digit hex (#abc) into 6-digit (#aabbcc). Map common names to hex.
-// If invalid, return original (will fail validation).
 function toHex6(value: string): string {
     if (!value) return value
     const v = value.trim()
@@ -80,10 +41,11 @@ function toHex6(value: string): string {
     if (named[v.toLowerCase()]) return named[v.toLowerCase()]
     return v
 }
-
 const HEX6_RE = /^#([0-9A-Fa-f]{6})$/
-const defaultFilter = createFilterOptions<string>()
 
+/* =========================
+ * Component
+ * ========================= */
 export default function Categories() {
     const [categories, setCategories] = useState<Category[]>([])
     const [loading_add_update, setLoading] = useState(false)
@@ -93,26 +55,22 @@ export default function Categories() {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [name, setName] = useState('')
     const [color, setColor] = useState('#ffffff') // Always keep 6-digit hex here
-    const [icon, setIcon] = useState<string>('Category')
+    const [imageUrl, setImageUrl] = useState<string>('')
 
     // Field errors
     const [nameError, setNameError] = useState<string | null>(null)
     const [colorError, setColorError] = useState<string | null>(null)
-    const [iconError, setIconError] = useState<string | null>(null)
+    const [imageUrlError, setImageUrlError] = useState<string | null>(null)
 
     // Snackbar
     const [snackOpen, setSnackOpen] = useState(false)
     const [snackMsg, setSnackMsg] = useState('')
     const [snackSeverity, setSnackSeverity] = useState<AlertColor>('success')
-
     const notify = (message: string, severity: AlertColor = 'success') => {
         setSnackMsg(message)
         setSnackSeverity(severity)
         setSnackOpen(true)
     }
-
-    // Base-only icon options
-    const ICON_OPTIONS = useMemo(() => getBaseIconNames(), [])
 
     // Fetch once on mount
     useEffect(() => {
@@ -120,15 +78,15 @@ export default function Categories() {
             setLoadingFetch(true)
             try {
                 const res = await api.get('/get_categories')
-                const list: Category[] = (res.data || []).map((c: any) => ({
+                const list: Category[] = (res.data ?? []).map((c: any) => ({
                     id: c.id,
                     name: c.name,
-                    color: toHex6(c.color || '#ffffff'),
-                    icon: c.icon ? toBaseIconName(c.icon) : 'Category',
+                    color: toHex6(c.color ?? '#ffffff'),
+                    image_url: c.image_url ?? null,
                 }))
                 setCategories(list)
             } catch (err: any) {
-                notify(err?.response?.data?.message || 'Failed to load categories', 'error')
+                notify(err?.response?.data?.message ?? 'Failed to load categories', 'error')
             } finally {
                 setLoadingFetch(false)
             }
@@ -137,25 +95,20 @@ export default function Categories() {
 
     // Local-only updates (no refetch)
     const addCategoryLocal = (created: Category) => setCategories((prev) => [created, ...prev])
-
     const updateCategoryLocal = (updated: Category) =>
         setCategories((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
-
     const removeCategoryLocal = (id: number) =>
         setCategories((prev) => prev.filter((c) => c.id !== id))
 
     function formatName(input: string, locale?: string): string {
         return input.replace(/(\S+)/g, (word) => {
-            // Use array spread to handle Unicode characters (accents, emojis)
             const chars = [...word]
-            if (chars.length < 2) return word // leave 1-char words as-is
-
+            if (chars.length < 2) return word
             const [first, ...rest] = chars
             const firstUp = locale ? first.toLocaleUpperCase(locale) : first.toLocaleUpperCase()
             const restLower = locale
                 ? rest.join('').toLocaleLowerCase(locale)
                 : rest.join('').toLocaleLowerCase()
-
             return firstUp + restLower
         })
     }
@@ -164,10 +117,10 @@ export default function Categories() {
         setEditingId(null)
         setName('')
         setColor('#ffffff')
-        setIcon('Category')
+        setImageUrl('')
         setNameError(null)
         setColorError(null)
-        setIconError(null)
+        setImageUrlError(null)
     }
 
     const validateName = (value: string): boolean | undefined => {
@@ -186,13 +139,49 @@ export default function Categories() {
         return true
     }
 
-    const validateForm = () => {
-        let ok = true
+    // Accept http(s) URLs and data:image/* URIs (base64 or percent-encoded)
+    function validateImageUrl(value: string) {
+        const v = (value ?? '').trim()
 
-        if (!validateName(name)) {
-            ok = false
+        // Optional field: empty is valid
+        if (!v) {
+            setImageUrlError(null)
+            return true
         }
 
+        // Accept data:image/* URIs
+        if (v.startsWith('data:')) {
+            // Minimal validation for data:image:
+            // data:image/<subtype>[;charset=...][;base64],<payload>
+            const DATA_IMAGE_RE = /^data:image\/[a-z0-9.+-]+(?:;charset=[^;,\s]+)?(?:;base64)?,/i
+
+            if (!DATA_IMAGE_RE.test(v)) {
+                setImageUrlError('Invalid data URI. Expected data:image/<type>[;base64],<payload>')
+                return false
+            }
+
+            setImageUrlError(null)
+            return true
+        }
+
+        // Else, treat as a normal URL and require http(s)
+        try {
+            const u = new URL(v)
+            if (!/^https?:$/i.test(u.protocol)) {
+                setImageUrlError('Only http(s) or data:image URIs are allowed')
+                return false
+            }
+            setImageUrlError(null)
+            return true
+        } catch {
+            setImageUrlError('Invalid URL')
+            return false
+        }
+    }
+
+    const validateForm = () => {
+        let ok = true
+        if (!validateName(name)) ok = false
         const normalized = toHex6(color)
         if (!normalized || !HEX6_RE.test(normalized)) {
             setColorError('Color is required (6-digit hex, e.g. #ffffff)')
@@ -201,16 +190,7 @@ export default function Categories() {
             setColorError(null)
             if (normalized !== color) setColor(normalized)
         }
-
-        const baseIcon = toBaseIconName(icon)
-        if (!baseIcon || !ICON_OPTIONS.includes(baseIcon)) {
-            setIconError('Select an icon from the list')
-            ok = false
-        } else {
-            setIconError(null)
-            if (baseIcon !== icon) setIcon(baseIcon)
-        }
-
+        if (!validateImageUrl(imageUrl)) ok = false
         return ok
     }
 
@@ -220,31 +200,43 @@ export default function Categories() {
             notify('Please fill all fields correctly', 'error')
             return
         }
-
         setLoading(true)
         try {
             if (editingId == null) {
                 // CREATE → update local array after success (no refetch)
-                const res = await api.post('/add_category', { name: name.trim(), color, icon })
-                const data = res?.data || {}
+                const res = await api.post('/add_category', {
+                    name: name.trim(),
+                    color,
+                    image_url: imageUrl || null,
+                })
+                const data = res?.data ?? {}
                 const created: Category = {
                     id: typeof data.id === 'number' ? data.id : Date.now(), // fallback id
                     name: data.name ?? name.trim(),
                     color: toHex6(data.color ?? color),
-                    icon: toBaseIconName(data.icon ?? icon),
+                    image_url: (data.image_url ?? imageUrl) || null,
                 }
                 addCategoryLocal(created)
                 notify('Category created successfully!', 'success')
             } else {
                 // UPDATE → update local array after success (no refetch)
-                await api.put(`/edit_category/${editingId}`, { name: name.trim(), color, icon })
-                updateCategoryLocal({ id: editingId, name: name.trim(), color, icon })
+                await api.put(`/edit_category/${editingId}`, {
+                    name: name.trim(),
+                    color,
+                    image_url: imageUrl || null,
+                })
+                updateCategoryLocal({
+                    id: editingId,
+                    name: name.trim(),
+                    color,
+                    image_url: imageUrl || null,
+                } as Category)
                 notify('Category updated successfully!', 'success')
             }
             resetForm()
             window.scrollTo({ top: 0, behavior: 'smooth' })
         } catch (err: any) {
-            notify(err?.response?.data?.message || 'Request failed', 'error')
+            notify(err?.response?.data?.message ?? 'Request failed', 'error')
         } finally {
             setLoading(false)
         }
@@ -254,22 +246,53 @@ export default function Categories() {
         setEditingId(cat.id)
         setName(cat.name)
         setColor(toHex6(cat.color))
-        setIcon(toBaseIconName(cat.icon || 'Category'))
+        setImageUrl(cat.image_url ?? '')
         setNameError(null)
         setColorError(null)
-        setIconError(null)
+        setImageUrlError(null)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    const SelectedIcon = resolveIcon(icon)
+    // Preview box for the image (or fallback icon)
+    const Preview = (
+        <Box
+            sx={{
+                width: 64,
+                height: 64,
+                borderRadius: 1,
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: `1px solid ${color}`,
+                bgcolor: 'rgba(255,255,255,0.06)',
+            }}
+        >
+            {imageUrl ? (
+                <Box
+                    component="img"
+                    src={imageUrl}
+                    alt="category"
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+            ) : (
+                <AddPhotoAlternateIcon sx={{ color, opacity: 0.9, fontSize: 32 }} />
+            )}
+        </Box>
+    )
 
     return (
         <Box>
             {/* Form Card */}
-            <Card variant="outlined" sx={{ mb: 3, backgroundColor: 'rgb(50, 50, 50)' }}>
+            <Card variant="outlined" sx={{ mb: 3, bgcolor: theme.palette.customColors?.grey_6 }}>
                 <CardContent>
                     <form onSubmit={handleSubmit} noValidate>
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={2}
+                            alignItems="flex-start"
+                        >
+                            {/* Name */}
                             <TextField
                                 label="Name"
                                 value={name}
@@ -279,97 +302,61 @@ export default function Categories() {
                                 }}
                                 required
                                 error={!!nameError}
-                                helperText={nameError || name.length + ' / 50'}
+                                helperText={nameError ?? name.length + ' / 50'}
                                 color={editingId ? 'warning' : 'success'}
                                 slotProps={{
                                     input: {
-                                        endAdornment: name ? (
+                                        endAdornment: (
                                             <InputAdornment position="end">
                                                 <Button size="small" onClick={() => setName('')}>
                                                     Clear
                                                 </Button>
                                             </InputAdornment>
-                                        ) : null,
+                                        ),
                                     },
                                 }}
-                                sx={{
-                                    width: 550,
-                                }}
+                                sx={{ width: 420 }}
                             />
 
-                            {/* Color picker (keep value as 6-digit hex) */}
+                            {/* Color picker */}
                             <TextField
                                 label="Color"
                                 type="color"
                                 value={color}
                                 onChange={(e) => setColor(toHex6(e.target.value))}
                                 sx={{ width: 140 }}
-                                slotProps={{
-                                    htmlInput: {
-                                        'aria-label': 'Category color',
-                                    },
-                                }}
+                                slotProps={{ htmlInput: { 'aria-label': 'Category color' } }}
                                 required
                                 error={!!colorError}
-                                helperText={colorError || ' '}
+                                helperText={colorError ?? ' '}
                                 color={editingId ? 'warning' : 'success'}
                             />
 
-                            {/* Icon Autocomplete (base-only) with icon + name; show only first 50 until search */}
-                            <Autocomplete
-                                options={ICON_OPTIONS}
-                                value={icon}
-                                onChange={(_, newValue) => setIcon(newValue || '')}
-                                getOptionLabel={(opt) => opt}
-                                isOptionEqualToValue={(opt, val) => opt === val}
-                                disableClearable
-                                filterOptions={(opts, state) => {
-                                    // Performance: if there is no search input, only list the first 50
-                                    if (!state.inputValue) return opts.slice(0, 50)
-                                    return defaultFilter(opts, state)
+                            {/* Image URL (optional) */}
+                            <TextField
+                                label="Image URL (optional)"
+                                value={imageUrl}
+                                onChange={(e) => setImageUrl(e.target.value)}
+                                onBlur={(e) => validateImageUrl(e.target.value)}
+                                placeholder="https://example.com/image.png"
+                                error={!!imageUrlError}
+                                helperText={imageUrlError ?? ' '}
+                                color={editingId ? 'warning' : 'success'}
+                                sx={{ width: 420 }}
+                                slotProps={{
+                                    input: {
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <AddPhotoAlternateIcon fontSize="small" />
+                                            </InputAdornment>
+                                        ),
+                                        spellCheck: false,
+                                    },
                                 }}
-                                renderOption={(props, option) => {
-                                    const OptIcon = resolveIcon(option)
-                                    return (
-                                        <li
-                                            {...props}
-                                            key={option}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                            }}
-                                        >
-                                            <OptIcon fontSize="small" />
-                                            <span>{option}</span>
-                                        </li>
-                                    )
-                                }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Icon (base variant)"
-                                        color={editingId ? 'warning' : 'success'}
-                                        required
-                                        error={!!iconError}
-                                        helperText={iconError || ' '}
-                                        slotProps={{
-                                            input: {
-                                                ...params.InputProps,
-                                                startAdornment: (
-                                                    <>
-                                                        <InputAdornment position="start">
-                                                            <SelectedIcon fontSize="small" />
-                                                        </InputAdornment>
-                                                        {params.InputProps.startAdornment}
-                                                    </>
-                                                ),
-                                            },
-                                        }}
-                                    />
-                                )}
-                                sx={{ width: 220 }}
                             />
+
+                            {/* Preview */}
+                            {Preview}
                         </Stack>
 
                         <Stack direction="row" spacing={1.5} sx={{ mt: 2 }}>
@@ -381,12 +368,10 @@ export default function Categories() {
                                     editingId == null ? <AddCircleOutlineIcon /> : <EditIcon />
                                 }
                                 disabled={loading_add_update}
-                                loading={loading_add_update}
                                 sx={{ fontWeight: 'bold' }}
                             >
                                 {editingId == null ? 'Add Category' : 'Update Category'}
                             </Button>
-
                             {editingId != null && (
                                 <Button type="button" variant="outlined" onClick={resetForm}>
                                     Cancel
